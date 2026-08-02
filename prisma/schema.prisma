@@ -1,0 +1,60 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum RoastStatus {
+  pending
+  processing
+  complete
+  failed
+}
+
+model Roast {
+  id            String        @id @default(cuid())
+  url           String
+  screenshotUrl String?
+  status        RoastStatus   @default(pending)
+  score         Int?
+  critique      Json?
+  createdAt     DateTime      @default(now())
+  unlockedAt    DateTime?
+  leadCaptures  LeadCapture[]
+  events        Event[]
+}
+
+model LeadCapture {
+  id        String   @id @default(cuid())
+  roastId   String
+  roast     Roast    @relation(fields: [roastId], references: [id], onDelete: Cascade)
+  name      String
+  email     String
+  message   String?
+  createdAt DateTime @default(now())
+
+  @@index([roastId])
+}
+
+// A minimal analytics events table — deliberately a flexible `type` string
+// rather than an enum, so new event types don't need a migration. `lib/analytics.ts`
+// is the source of truth for which type strings the app actually emits.
+model Event {
+  id        String   @id @default(cuid())
+  type      String
+  roastId   String?
+  roast     Roast?   @relation(fields: [roastId], references: [id], onDelete: SetNull)
+  path      String?
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  @@index([type])
+  @@index([roastId])
+  @@index([createdAt])
+}

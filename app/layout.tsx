@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
@@ -28,7 +29,17 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="flex min-h-full flex-col">{children}</body>
+      <body className="flex min-h-full flex-col">
+        {children}
+        <footer className="flex justify-center bg-neutral-950 py-4">
+          <Link
+            href="/privacy"
+            className="text-xs text-neutral-600 underline underline-offset-2 transition hover:text-neutral-400"
+          >
+            Privacy Policy
+          </Link>
+        </footer>
+      </body>
     </html>
   );
 }

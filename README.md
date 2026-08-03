@@ -186,6 +186,12 @@ generated client (gitignored — see [Notes](#notes)) exists before anything tri
   URL, score, and headline roast point — with a generic branded fallback for roasts that
   don't exist yet or aren't complete. A "Want it professionally done?" CTA links directly to a
   Calendly booking page — see [Professional help CTA](#professional-help-cta) below.
+- **`/privacy`** ([app/privacy/page.tsx](app/privacy/page.tsx)) — plain-English privacy policy
+  describing what NexRoast actually collects and which third parties (Gemini, R2, Stripe, Vercel,
+  Neon, Inngest, Calendly) it flows through. Linked from a small footer in
+  [app/layout.tsx](app/layout.tsx) on every page. `noindex`, same reasoning as roast pages —
+  not something worth ranking for. This is a good-faith draft based on the app's actual
+  technical behavior, not a substitute for real legal review.
 - **`/robots.txt`** ([app/robots.ts](app/robots.ts)) and **`/sitemap.xml`**
   ([app/sitemap.ts](app/sitemap.ts)) — Next's metadata route conventions, generated at request
   time. The sitemap only lists `/`: roast pages are ephemeral, per-visitor share links rather

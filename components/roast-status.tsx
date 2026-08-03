@@ -1,11 +1,12 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
+import { RoastReportCard } from "@/components/roast-report-card";
 import { trackClient } from "@/lib/analytics-client";
-import type { Critique } from "@/lib/critique";
+import type { PublicCritique } from "@/lib/critique";
+import { stripEmphasis } from "@/lib/rich-text";
 import { scoreBucket, STATUS_STYLES } from "@/lib/score-style";
 
 const CALENDLY_URL = process.env.NEXT_PUBLIC_CALENDLY_URL;
@@ -13,10 +14,10 @@ const CALENDLY_URL = process.env.NEXT_PUBLIC_CALENDLY_URL;
 const LOADING_MESSAGES = [
   "Judging your font choices…",
   "Counting how many stock photos you used…",
-  "Squinting at your color palette…",
+  "Squinting at your colour palette…",
   "Timing how long your hero image takes to load…",
   "Reading your headline out loud, unimpressed…",
-  "Checking if that button actually does anything…",
+  "Checking whether that button actually does anything…",
   "Comparing your site to a Squarespace template from 2014…",
   "Deciding how gentle to be (spoiler: not very)…",
 ];
@@ -27,7 +28,6 @@ const MESSAGE_INTERVAL_MS = 2200;
 // the roast can lag the redirect by a couple of seconds. Cap how long we
 // keep polling for it so a missed/delayed webhook doesn't poll forever.
 const MAX_UNLOCK_POLL_ATTEMPTS = 20;
-const FREE_ROAST_POINTS = 2;
 
 type RoastData = {
   id: string;
@@ -35,19 +35,8 @@ type RoastData = {
   screenshotUrl: string | null;
   status: "pending" | "processing" | "complete" | "failed";
   score: number | null;
-  critique: Critique | null;
+  critique: PublicCritique | null;
   unlockedAt: string | null;
-};
-
-const CATEGORY_META: Record<
-  Critique["roastPoints"][number]["category"],
-  { label: string; icon: string }
-> = {
-  design: { label: "Design", icon: "🎨" },
-  ux: { label: "UX", icon: "🧭" },
-  conversion: { label: "Conversion", icon: "💸" },
-  speed: { label: "Speed", icon: "⚡" },
-  trust: { label: "Trust", icon: "🛡️" },
 };
 
 export function RoastStatus({ roastId }: { roastId: string }) {
@@ -220,17 +209,12 @@ function RoastResult({
   unlockPollTimedOut,
 }: {
   roast: RoastData;
-  critique: Critique;
+  critique: PublicCritique;
   awaitingUnlock: boolean;
   unlockPollTimedOut: boolean;
 }) {
-  const bucket = scoreBucket(critique.score);
-  const style = STATUS_STYLES[bucket];
+  const style = STATUS_STYLES[scoreBucket(critique.score)];
   const isUnlocked = Boolean(roast.unlockedAt);
-  const visiblePoints = isUnlocked
-    ? critique.roastPoints
-    : critique.roastPoints.slice(0, FREE_ROAST_POINTS);
-  const lockedCount = critique.roastPoints.length - visiblePoints.length;
 
   return (
     <main className="flex flex-1 flex-col items-center gap-8 bg-gradient-to-b from-neutral-950 via-neutral-950 to-orange-950 px-5 py-10 sm:px-6 sm:py-16">
@@ -255,18 +239,11 @@ function RoastResult({
         </span>
       </div>
 
-      {roast.screenshotUrl && (
-        <div className="w-full max-w-2xl overflow-hidden rounded-2xl border border-white/10">
-          <Image
-            src={roast.screenshotUrl}
-            alt={`Screenshot of ${roast.url}`}
-            width={1440}
-            height={900}
-            className="h-auto w-full"
-            priority
-          />
-        </div>
-      )}
+      <RoastReportCard
+        url={roast.url}
+        screenshotUrl={roast.screenshotUrl}
+        critique={critique}
+      />
 
       {awaitingUnlock && (
         <div className="w-full max-w-2xl rounded-2xl border border-orange-400/30 bg-orange-500/10 p-4 text-center">
@@ -292,39 +269,13 @@ function RoastResult({
         </div>
       )}
 
-      <div className="grid w-full max-w-2xl grid-cols-1 gap-4 sm:grid-cols-2">
-        {visiblePoints.map((point, index) => {
-          const meta = CATEGORY_META[point.category];
-          return (
-            <div
-              key={index}
-              className="flex flex-col gap-2 rounded-2xl border border-white/10 bg-white/5 p-5 text-left"
-            >
-              <span className="inline-flex w-fit items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 text-xs font-bold tracking-wide text-neutral-300 uppercase">
-                {meta.icon} {meta.label}
-              </span>
-              <p className="text-sm text-neutral-200 sm:text-base">
-                {point.critique}
-              </p>
-            </div>
-          );
-        })}
-      </div>
-
       {isUnlocked ? (
-        <>
-          <div className="w-full max-w-2xl rounded-2xl border border-orange-400/30 bg-orange-500/10 p-5 text-left">
-            <span className="inline-flex items-center gap-1.5 text-xs font-bold tracking-wide text-orange-300 uppercase">
-              💡 Biggest win
-            </span>
-            <p className="mt-2 text-sm text-neutral-100 sm:text-base">
-              {critique.biggestWin}
-            </p>
-          </div>
-          <BookCallCTA roastId={roast.id} variant="standalone" />
-        </>
+        <BookCallCTA roastId={roast.id} variant="standalone" />
       ) : (
-        <PaywallCTA roastId={roast.id} lockedCount={lockedCount} />
+        <PaywallCTA
+          roastId={roast.id}
+          lockedCount={critique.lockedParagraphCount}
+        />
       )}
 
       <div className="flex w-full max-w-2xl flex-col items-center gap-3 sm:flex-row sm:justify-center">
@@ -373,45 +324,37 @@ function PaywallCTA({
   }
 
   return (
-    <div className="relative w-full max-w-2xl overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-6 text-center">
-      {/* Decorative only — no real locked content is ever sent to the
-          client, so there's nothing here to leak via view-source. */}
-      <div
-        aria-hidden
-        className="pointer-events-none mb-5 space-y-2 opacity-30 blur-[2px] select-none"
-      >
-        <div className="mx-auto h-3 w-3/4 rounded bg-white/30" />
-        <div className="mx-auto h-3 w-1/2 rounded bg-white/30" />
-      </div>
-
+    <div className="w-full max-w-2xl rounded-2xl border border-white/10 bg-white/5 p-6 text-center">
       <div className="flex flex-col items-center gap-3">
-        <span className="text-3xl">🔒</span>
-        <p className="text-lg font-black text-white">
-          +{lockedCount} more issue{lockedCount === 1 ? "" : "s"} found
+        <span className="rounded-full border border-orange-400/40 bg-orange-500/10 px-3 py-1 text-[11px] font-bold tracking-[0.12em] text-orange-300 uppercase">
+          Unlocked: the polite half
+        </span>
+        <p className="text-xl font-black text-white sm:text-2xl">
+          Fancy the rest of the bad news?
         </p>
-
-        <div className="mt-1 flex w-full flex-col items-center gap-2">
-          <p className="text-base font-bold text-white">
-            Want to try to fix it yourself?
+        <p className="max-w-md text-sm text-neutral-400">
+          {lockedCount > 0
+            ? `We found ${lockedCount} more problem${lockedCount === 1 ? "" : "s"} and kept ${lockedCount === 1 ? "it" : "them"} behind the blur. `
+            : ""}
+          Unlock the full write-up — every issue we spotted, the one fix worth
+          doing first, and a PDF you can forward to whoever built this.
+        </p>
+        <button
+          type="button"
+          onClick={handleUnlock}
+          disabled={loading}
+          className="mt-1 w-full max-w-xs rounded-2xl bg-gradient-to-r from-orange-500 to-red-500 px-6 py-3.5 text-base font-bold text-white shadow-lg shadow-orange-500/20 transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {loading ? "Redirecting to checkout…" : "Unlock the full report — £9"}
+        </button>
+        <p className="text-xs text-neutral-500">
+          One-off payment. Instant delivery. No mercy.
+        </p>
+        {error && (
+          <p role="alert" className="text-sm font-medium text-red-400">
+            {error}
           </p>
-          <p className="max-w-sm text-sm text-neutral-400">
-            Unlock the full report — every issue, your biggest win, and a
-            downloadable PDF.
-          </p>
-          <button
-            type="button"
-            onClick={handleUnlock}
-            disabled={loading}
-            className="w-full max-w-xs rounded-2xl bg-gradient-to-r from-orange-500 to-red-500 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-orange-500/20 transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {loading ? "Redirecting to checkout…" : "Unlock Full Report — £9"}
-          </button>
-          {error && (
-            <p role="alert" className="text-sm font-medium text-red-400">
-              {error}
-            </p>
-          )}
-        </div>
+        )}
       </div>
 
       {CALENDLY_URL && (
@@ -463,7 +406,7 @@ function ShareButton({
   critique,
 }: {
   roast: RoastData;
-  critique: Critique;
+  critique: PublicCritique;
 }) {
   const [status, setStatus] = useState<"idle" | "copied" | "failed">("idle");
   const [shareUrl, setShareUrl] = useState("");
@@ -489,9 +432,12 @@ function ShareButton({
     trackClient("share_click", { roastId: roast.id });
     const url = window.location.href;
     setShareUrl(url);
+    // The sign-off is the line built to be quoted; the opening paragraph is
+    // the fallback for legacy roasts, which have no sign-off.
+    const pullQuote = stripEmphasis(critique.zinger ?? critique.opening);
     const shareData = {
       title: "NexRoast",
-      text: `${roast.url} scored ${critique.score}/100 on NexRoast 🔥 ${critique.roastPoints[0]?.critique ?? ""}\n\n#webdesign #smallbusiness #website #roasted`,
+      text: `${roast.url} scored ${critique.score}/100 on NexRoast 🔥 ${pullQuote}\n\n#webdesign #smallbusiness #website #roasted`,
       url,
     };
 

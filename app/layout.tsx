@@ -1,7 +1,13 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+
+const AGENCY_URL = "https://nexiorastudio.com";
+
+const FOOTER_LINK_CLASS =
+  "text-sm text-neutral-400 transition hover:text-orange-400";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -31,13 +37,58 @@ export default function RootLayout({
     >
       <body className="flex min-h-full flex-col">
         {children}
-        <footer className="flex justify-center bg-neutral-950 py-4">
-          <Link
-            href="/privacy"
-            className="text-xs text-neutral-600 underline underline-offset-2 transition hover:text-neutral-400"
-          >
-            Privacy Policy
-          </Link>
+        <footer className="border-t border-white/10 bg-neutral-950 px-5 py-10 sm:px-6">
+          <div className="mx-auto flex w-full max-w-5xl flex-col gap-8">
+            <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
+              <Link href="/" className="flex items-center gap-3">
+                <Image
+                  src="/NexRoast-Logo.png"
+                  alt=""
+                  width={44}
+                  height={44}
+                  className="h-11 w-11 rounded-full"
+                />
+                <span className="flex flex-col">
+                  <span className="text-base font-black text-white">
+                    NexRoast
+                  </span>
+                  <span className="text-xs text-neutral-500">
+                    Brutally honest website roasts.
+                  </span>
+                </span>
+              </Link>
+
+              <nav className="flex flex-wrap items-center gap-x-6 gap-y-2">
+                <a
+                  href={AGENCY_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={FOOTER_LINK_CLASS}
+                >
+                  Nexiora Studio ↗
+                </a>
+                <Link href="/privacy" className={FOOTER_LINK_CLASS}>
+                  Privacy Policy
+                </Link>
+                <Link href="/terms" className={FOOTER_LINK_CLASS}>
+                  Terms &amp; Conditions
+                </Link>
+              </nav>
+            </div>
+
+            <p className="text-xs text-neutral-600">
+              © {new Date().getFullYear()} NexRoast — a{" "}
+              <a
+                href={AGENCY_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline underline-offset-2 transition hover:text-neutral-400"
+              >
+                Nexiora Studio
+              </a>{" "}
+              project. All rights reserved.
+            </p>
+          </div>
         </footer>
       </body>
     </html>

@@ -84,44 +84,6 @@ export default function PrivacyPolicyPage() {
           </p>
         </Section>
 
-        <Section title="Who we share it with">
-          <p>
-            Generating a roast necessarily involves sending your screenshot and
-            page details to the services that make this work:
-          </p>
-          <ul className="list-disc space-y-1 pl-5">
-            <li>
-              <strong className="text-white">Google (Gemini API)</strong> —
-              generates the critique from your screenshot. On Google&apos;s free
-              API tier, submitted content may be used to improve their models;
-              we&apos;re working to move off the free tier as this scales.
-            </li>
-            <li>
-              <strong className="text-white">Cloudflare (R2)</strong> — stores
-              the screenshot, which is what makes it viewable on your roast page
-              and in share-card previews.
-            </li>
-            <li>
-              <strong className="text-white">Stripe</strong> — processes payment
-              for the full report. We never handle your card details directly.
-            </li>
-            <li>
-              <strong className="text-white">Vercel, Neon, and Inngest</strong>{" "}
-              — host the app, the database, and the background jobs that
-              generate your critique.
-            </li>
-            <li>
-              <strong className="text-white">Calendly</strong> — only if you
-              click through to book a call; you&apos;ll be interacting with
-              their site directly at that point.
-            </li>
-          </ul>
-          <p>
-            We don&apos;t share your data with anyone else, and we don&apos;t
-            sell it.
-          </p>
-        </Section>
-
         <Section title="Cookies">
           <p>
             NexRoast itself doesn&apos;t set cookies — there&apos;s no login, so

@@ -1,6 +1,6 @@
 import { renderToBuffer } from "@react-pdf/renderer";
 import { NextResponse } from "next/server";
-import { CritiqueSchema } from "@/lib/critique";
+import { normalizeCritique } from "@/lib/critique";
 import { RoastReportDocument } from "@/lib/pdf/roast-report";
 import { prisma } from "@/lib/prisma";
 
@@ -33,8 +33,8 @@ export async function GET(
     );
   }
 
-  const parsed = CritiqueSchema.safeParse(roast.critique);
-  if (!parsed.success) {
+  const critique = normalizeCritique(roast.critique);
+  if (!critique) {
     console.error("Roast critique failed schema validation", roast.id);
     return NextResponse.json(
       { error: "This report's data looks corrupted." },
@@ -46,7 +46,7 @@ export async function GET(
     RoastReportDocument({
       url: roast.url,
       score: roast.score,
-      critique: parsed.data,
+      critique,
       screenshotUrl: roast.screenshotUrl,
       generatedAt: new Date(),
     }),

@@ -1,6 +1,11 @@
-import type { Critique } from "@/lib/critique";
-import { CritiqueSchema } from "@/lib/critique";
-import { scoreBucket, STATUS_STYLES } from "@/lib/score-style";
+import { normalizeCritique } from "@/lib/critique";
+import { stripEmphasis } from "@/lib/rich-text";
+import {
+  scoreBucket,
+  STATUS_STYLES,
+  SURVIVAL_MAX,
+  survivalStars,
+} from "@/lib/score-style";
 
 export const OG_IMAGE_SIZE = { width: 1200, height: 630 };
 export const OG_IMAGE_CONTENT_TYPE = "image/png";
@@ -21,35 +26,24 @@ export function getOgImageProps(
 ): { url: string | null; score: number | null; headline: string | null } {
   if (!roast) return { url: null, score: null, headline: null };
 
-  const parsed = CritiqueSchema.safeParse(roast.critique);
+  const critique = normalizeCritique(roast.critique);
   return {
     url: roast.url,
     score: roast.score,
-    headline: parsed.success
-      ? (parsed.data.roastPoints[0]?.critique ?? null)
+    // The sign-off is written to be quoted, so it's the better card headline
+    // when there is one; legacy roasts fall back to the opening paragraph.
+    headline: critique
+      ? stripEmphasis(critique.zinger ?? critique.opening)
       : null,
   };
 }
 
-type RoastPoint = Critique["roastPoints"][number];
-
-const CATEGORY_META: Record<
-  RoastPoint["category"],
-  { label: string; icon: string }
-> = {
-  design: { label: "Design", icon: "🎨" },
-  ux: { label: "UX", icon: "🧭" },
-  conversion: { label: "Conversion", icon: "💸" },
-  speed: { label: "Speed", icon: "⚡" },
-  trust: { label: "Trust", icon: "🛡️" },
-};
-
 /**
  * Props for the TikTok share card — needs more than the OG card (the
- * screenshot, more than one roast point) since it's meant to stand on its
- * own as content, not just caption a link. Capped at 2 roast points, same as
- * FREE_ROAST_POINTS in components/roast-status.tsx: this is promotional
- * material, not a way to leak what's behind the paywall.
+ * screenshot, a real pull-quote) since it's meant to stand on its own as
+ * content, not just caption a link. Only ever carries the parts of a roast
+ * that are free on the page anyway: this is promotional material, not a way
+ * around the paywall.
  */
 export function getTikTokImageProps(
   roast: {
@@ -62,19 +56,40 @@ export function getTikTokImageProps(
   url: string | null;
   score: number | null;
   screenshotUrl: string | null;
-  roastPoints: RoastPoint[];
+  persona: string | null;
+  pullQuote: string | null;
+  zinger: string | null;
 } {
   if (!roast) {
-    return { url: null, score: null, screenshotUrl: null, roastPoints: [] };
+    return {
+      url: null,
+      score: null,
+      screenshotUrl: null,
+      persona: null,
+      pullQuote: null,
+      zinger: null,
+    };
   }
 
-  const parsed = CritiqueSchema.safeParse(roast.critique);
+  const critique = normalizeCritique(roast.critique);
   return {
     url: roast.url,
     score: roast.score,
     screenshotUrl: roast.screenshotUrl,
-    roastPoints: parsed.success ? parsed.data.roastPoints.slice(0, 2) : [],
+    persona: critique?.persona ?? null,
+    pullQuote: critique ? stripEmphasis(critique.opening) : null,
+    zinger: critique?.zinger ? stripEmphasis(critique.zinger) : null,
   };
+}
+
+/**
+ * Filled stars only, as emoji. next/og renders emoji through Twemoji, so a
+ * filled star is guaranteed a glyph; the hollow ☆ is an ordinary text
+ * character with no such guarantee, and a row of tofu boxes on a share card
+ * is worse than showing the count alongside.
+ */
+function starRow(score: number): string {
+  return "⭐".repeat(survivalStars(score));
 }
 
 function hostnameOf(url: string): string {
@@ -174,20 +189,36 @@ export function RoastOgImage({
                 display: "flex",
                 flexDirection: "column",
                 alignItems: "center",
-                justifyContent: "center",
-                width: 220,
-                height: 220,
-                borderRadius: 110,
-                border: `10px solid ${style.hex}`,
-                backgroundColor: "rgba(255,255,255,0.04)",
+                gap: 14,
                 flexShrink: 0,
               }}
             >
-              <span style={{ fontSize: 80, fontWeight: 800, color: "#ffffff" }}>
-                {score}
-              </span>
-              <span style={{ fontSize: 24, fontWeight: 700, color: "#a3a3a3" }}>
-                /100
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  width: 220,
+                  height: 220,
+                  borderRadius: 110,
+                  border: `10px solid ${style.hex}`,
+                  backgroundColor: "rgba(255,255,255,0.04)",
+                }}
+              >
+                <span
+                  style={{ fontSize: 80, fontWeight: 800, color: "#ffffff" }}
+                >
+                  {score}
+                </span>
+                <span
+                  style={{ fontSize: 24, fontWeight: 700, color: "#a3a3a3" }}
+                >
+                  /100
+                </span>
+              </div>
+              <span style={{ display: "flex", fontSize: 26 }}>
+                {starRow(score)}
               </span>
             </div>
           )}
@@ -260,25 +291,28 @@ export function RoastOgImage({
  * Vertical (9:16) share card meant to be saved and dropped straight into a
  * TikTok/Reels video as visual content — not a link-preview card, so unlike
  * RoastOgImage above it stands on its own: it shows the actual screenshot,
- * a real "roast summary" pull-quote (not just a fact card), and a second
- * roast point as its own distinct "still needs work" section. No URL is
- * shown — a video has nothing to tap, so the CTA points at the bio link
- * instead, which is how creators actually drive traffic on this platform.
+ * the score and survival rating, a real pull-quote from the review, and the
+ * critic's sign-off as its own punchline panel. No URL is shown — a video has
+ * nothing to tap, so the CTA points at the bio link instead, which is how
+ * creators actually drive traffic on this platform.
  */
 export function RoastTikTokImage({
   url,
   score,
   screenshotUrl,
-  roastPoints,
+  persona,
+  pullQuote,
+  zinger,
 }: {
   url: string | null;
   score: number | null;
   screenshotUrl: string | null;
-  roastPoints: RoastPoint[];
+  persona: string | null;
+  pullQuote: string | null;
+  zinger: string | null;
 }) {
   const bucket = score !== null ? scoreBucket(score) : null;
   const style = bucket ? STATUS_STYLES[bucket] : null;
-  const [summaryPoint, secondPoint] = roastPoints;
 
   return (
     <div
@@ -409,10 +443,28 @@ export function RoastTikTokImage({
               >
                 {truncate(hostnameOf(url), 28)}
               </span>
+              {score !== null && (
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <span style={{ display: "flex", fontSize: 26 }}>
+                    {starRow(score)}
+                  </span>
+                  <span
+                    style={{
+                      display: "flex",
+                      fontSize: 22,
+                      fontWeight: 700,
+                      letterSpacing: 2,
+                      color: "#a3a3a3",
+                    }}
+                  >
+                    {survivalStars(score)}/{SURVIVAL_MAX} SURVIVAL
+                  </span>
+                </div>
+              )}
             </div>
           </div>
 
-          {summaryPoint && (
+          {pullQuote && (
             <span
               style={{
                 fontSize: 40,
@@ -422,11 +474,11 @@ export function RoastTikTokImage({
                 lineHeight: 1.35,
               }}
             >
-              &ldquo;{firstSentences(summaryPoint.critique, 150)}&rdquo;
+              &ldquo;{firstSentences(pullQuote, 150)}&rdquo;
             </span>
           )}
 
-          {secondPoint && (
+          {zinger && (
             <div
               style={{
                 display: "flex",
@@ -440,18 +492,19 @@ export function RoastTikTokImage({
                 backgroundColor: "rgba(251,146,60,0.08)",
               }}
             >
-              <span
-                style={{
-                  display: "flex",
-                  fontSize: 22,
-                  fontWeight: 700,
-                  letterSpacing: 2,
-                  color: "#fb923c",
-                }}
-              >
-                {CATEGORY_META[secondPoint.category].icon} ALSO NEEDS WORK:{" "}
-                {CATEGORY_META[secondPoint.category].label.toUpperCase()}
-              </span>
+              {persona && (
+                <span
+                  style={{
+                    display: "flex",
+                    fontSize: 22,
+                    fontWeight: 700,
+                    letterSpacing: 2,
+                    color: "#fb923c",
+                  }}
+                >
+                  {truncate(persona.toUpperCase(), 46)}
+                </span>
+              )}
               <span
                 style={{
                   fontSize: 30,
@@ -460,7 +513,7 @@ export function RoastTikTokImage({
                   lineHeight: 1.35,
                 }}
               >
-                {firstSentences(secondPoint.critique, 150)}
+                {firstSentences(zinger, 150)}
               </span>
             </div>
           )}

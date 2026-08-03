@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { RoastStatus } from "@/components/roast-status";
-import { CritiqueSchema } from "@/lib/critique";
+import { normalizeCritique } from "@/lib/critique";
 import { prisma } from "@/lib/prisma";
+import { stripEmphasis } from "@/lib/rich-text";
 
 function hostnameOf(url: string): string {
   try {
@@ -38,9 +39,9 @@ export async function generateMetadata({
     };
   }
 
-  const parsed = CritiqueSchema.safeParse(roast.critique);
-  const headline = parsed.success
-    ? parsed.data.roastPoints[0]?.critique
+  const critique = normalizeCritique(roast.critique);
+  const headline = critique
+    ? stripEmphasis(critique.zinger ?? critique.opening)
     : undefined;
 
   return {

@@ -18,22 +18,19 @@ const MODELS = [
   "gemini-3.1-flash-lite",
 ] as const;
 
-export const RoastCategory = z.enum([
-  "design",
-  "ux",
-  "conversion",
-  "speed",
-  "trust",
-]);
-
-export const RoastPointSchema = z.object({
-  category: RoastCategory,
-  critique: z
-    .string()
-    .describe("A punchy 1-2 sentence roast of this specific issue."),
-});
-
+/**
+ * The roast is written as a short editorial review — a handful of prose
+ * paragraphs under a made-up critic persona — rather than the grid of
+ * category cards this used to produce. Cards read like a bug tracker; prose
+ * reads like a column someone would actually screenshot and send to a mate,
+ * which is the entire distribution model for this thing.
+ */
 export const CritiqueSchema = z.object({
+  persona: z
+    .string()
+    .describe(
+      "A mock job title for the critic, tailored to this specific business — the joke should only work for this page.",
+    ),
   score: z
     .number()
     .int()
@@ -42,11 +39,28 @@ export const CritiqueSchema = z.object({
     .describe(
       "Overall quality score from 0 (atrocious) to 100 (flawless, high-converting).",
     ),
-  roastPoints: z
-    .array(RoastPointSchema)
-    .min(4)
-    .max(6)
-    .describe("4 to 6 distinct roast points covering different categories."),
+  opening: z
+    .string()
+    .describe(
+      "Opening paragraph: first impression of the page, credit where it's due, then the first hint of trouble.",
+    ),
+  roastParagraphs: z
+    .array(z.string())
+    .min(2)
+    .max(3)
+    .describe(
+      "2 to 3 paragraphs, each taking apart one concrete problem and what it costs.",
+    ),
+  silverLining: z
+    .string()
+    .describe(
+      "One paragraph on what genuinely works. Must not begin with the words 'the silver lining'.",
+    ),
+  zinger: z
+    .string()
+    .describe(
+      "A single-sentence sign-off in the form 'Brand: <pithy contradiction> — <what to do about it>.' ending in one emoji.",
+    ),
   biggestWin: z
     .string()
     .describe(
@@ -60,17 +74,36 @@ const CRITIQUE_JSON_SCHEMA = z.toJSONSchema(CritiqueSchema);
 
 export class CritiqueGenerationError extends Error {}
 
-const SYSTEM_PROMPT = `You are NexRoast, an AI that roasts websites for a living. Given a screenshot of a page's above-the-fold viewport plus some scraped metadata, you produce a structured critique.
+const SYSTEM_PROMPT = `You are NexRoast: a British website critic with the manner of a newspaper columnist who has reviewed several thousand small-business homepages and long since stopped being polite about any of them. You are given a screenshot of a page's above-the-fold viewport plus some scraped metadata, and you write a short, sharp review of it.
 
-Tone: confident, witty, TikTok-friendly — the kind of roast that gets screenshotted and shared. Punchy and funny, but with real teeth: this should sting because it's true, not because it's cruel. Never mean-spirited or personal — roast the site's design and decisions, not the people who made them.
+VOICE — this matters more than anything else here:
+- British English throughout. Colour, optimise, realise, favourite, apologise, licence, cheque. Never American spellings, never "gotten", never "math", never "$" — money is £.
+- Dry, sarcastic, understated. The humour lives in the restraint, not the volume. "Which is a bold choice" beats "WHICH IS INSANE". Deadpan beats exclamation marks. Use no exclamation marks at all.
+- British register and reference points: things being "a bit much", "brave", "a choice", queues, the weather, Argos, a village fête, a Wetherspoons menu, an out-of-office reply, a bloke called Dave who does websites on the side. Understatement and faint praise are your sharpest tools.
+- Address the site and its decisions, never the people who built it. Punch at the work, not the person. No profanity, no personal attacks, nothing about anyone's appearance, race, gender or nationality.
+- This should sting because it is true, not because it is cruel. Every joke has to be load-bearing on a real observation.
 
-Don't just list flaws — make the reader feel what each one is actually costing them. Every roast point should land on a concrete consequence: the customer who bounced, the sale that went to a competitor with a clearer CTA, the visitor who didn't trust it enough to enter their card details, the ad spend burned sending traffic to a page that was never going to convert it. The reaction you're going for is "oh no, that's actually losing me money" — real stakes, not just a laugh.
+WHAT TO WRITE:
 
-Score 0-100 reflects overall quality as a landing page: how well it converts, how credible it looks, and how well it's built — 100 is flawless and high-converting, 0 is atrocious.
+persona — a mock job title for yourself, invented fresh for this specific business, in the style of "The Pipe Inspector General" for a plumbing firm or "The Brutally Honest Brand Auditor Who Definitely Has 20+ Opinions" for an agency claiming "20+ clients". It should be a joke only someone who actually looked at this page could make. Title Case, starting with "The".
 
-Give 4-6 roast points. Each must have a category (design, ux, conversion, speed, or trust) and a 1-2 sentence critique in the tone above — specific, vivid, and tied to a real cost of leaving it as-is. Cover a mix of categories rather than repeating the same one.
+score — 0 to 100 for overall quality as a landing page: how well it converts, how credible it looks, how well it is built. 100 is flawless, 0 is atrocious.
 
-Then give one "biggest win" recommendation: the single change that would move the needle most if fixed — frame it around what they're actively losing by not fixing it, not just a generic suggestion.
+opening — one paragraph. Set the scene with a comparison, give genuine credit for whatever is working, then land the first hint that something is badly off.
+
+roastParagraphs — two or three paragraphs, one problem each, in descending order of how much it is costing them. Quote the actual evidence you can see: the exact headline wording, the specific claim in the hero, the nav labels, the number in the stat block, the load time in milliseconds. Then make the cost concrete and human — the visitor who bounced, the enquiry that went to a competitor with a clearer call to action, the customer who did not trust it enough to hand over card details, the ad budget spent sending traffic to a page that was never going to convert it. Reader's reaction should be "oh, that is actually losing me money", not just a laugh.
+
+silverLining — one paragraph on what genuinely works, and mean it. Do not begin with the words "the silver lining" — that heading is added separately. Faint praise is fine; empty praise is not.
+
+zinger — one sentence, in the shape "BrandName: <two things in ironic contradiction> — <the thing they should do before it gets worse>." Finish with exactly one emoji that fits the business. Keep it under 30 words.
+
+biggestWin — the single change that would move the needle most, framed around what they are actively losing by not fixing it.
+
+FORMATTING:
+- Wrap the two or three most load-bearing phrases in each paragraph in **double asterisks** for bold — especially anything quoted directly off the page and any number.
+- Use *single asterisks* for a wry italic aside at most twice across the whole review.
+- Do not use any other markdown: no headings, no bullet points, no links.
+- Never invent facts you cannot see in the screenshot or the metadata.
 
 Respond with JSON matching the provided schema only.`;
 
@@ -179,4 +212,111 @@ export async function generateCritique(input: {
   throw new CritiqueGenerationError(
     "No Gemini model returned a valid, safe critique after trying all fallbacks.",
   );
+}
+
+// ---------------------------------------------------------------------------
+// Reading critiques back out of the database
+// ---------------------------------------------------------------------------
+
+const LEGACY_CATEGORY_LABELS: Record<string, string> = {
+  design: "Design",
+  ux: "UX",
+  conversion: "Conversion",
+  speed: "Speed",
+  trust: "Trust",
+};
+
+/**
+ * The shape roasts were generated in before the editorial rewrite: a score,
+ * a flat list of categorised one-liners, and a biggest win.
+ */
+const LegacyCritiqueSchema = z.object({
+  score: z.number().int().min(0).max(100),
+  roastPoints: z
+    .array(
+      z.object({
+        category: z.enum(["design", "ux", "conversion", "speed", "trust"]),
+        critique: z.string(),
+      }),
+    )
+    .min(1),
+  biggestWin: z.string(),
+});
+
+/**
+ * What every reader (page, OG card, PDF) actually renders. Identical to
+ * `Critique` except that the two fields legacy roasts have no equivalent for
+ * are nullable, so old records — including ones somebody has already paid to
+ * unlock — keep working instead of hard-failing schema validation.
+ */
+export type DisplayCritique = {
+  persona: string;
+  score: number;
+  opening: string;
+  roastParagraphs: string[];
+  silverLining: string | null;
+  zinger: string | null;
+  biggestWin: string;
+};
+
+/**
+ * Parses a `Roast.critique` JSON column into the display shape, accepting
+ * either the current editorial format or the older roast-points format.
+ * Returns null if it's neither, which callers treat as a broken roast.
+ */
+export function normalizeCritique(raw: unknown): DisplayCritique | null {
+  const current = CritiqueSchema.safeParse(raw);
+  if (current.success) return current.data;
+
+  const legacy = LegacyCritiqueSchema.safeParse(raw);
+  if (!legacy.success) return null;
+
+  const [first, ...rest] = legacy.data.roastPoints;
+  return {
+    persona: "The Brutally Honest Website Auditor",
+    score: legacy.data.score,
+    opening: first.critique,
+    // Categories were the only structure the old format had, so they're kept
+    // as bold lead-ins rather than thrown away in the conversion.
+    roastParagraphs: rest.map(
+      (point) =>
+        `**${LEGACY_CATEGORY_LABELS[point.category] ?? "Also"}.** ${point.critique}`,
+    ),
+    silverLining: null,
+    zinger: null,
+    biggestWin: legacy.data.biggestWin,
+  };
+}
+
+/**
+ * How many roast paragraphs a locked (unpaid) roast shows. The opening,
+ * silver lining and sign-off are always free — they're what makes the page
+ * worth sharing — so what's actually behind the paywall is the depth: the
+ * remaining problems and the single biggest win.
+ */
+export const FREE_ROAST_PARAGRAPHS = 1;
+
+/**
+ * The critique as sent to the browser. Locked paragraphs and the biggest win
+ * are removed server-side rather than hidden with CSS, so the paywall holds
+ * up against view-source and a peek at the network tab.
+ */
+export type PublicCritique = Omit<DisplayCritique, "biggestWin"> & {
+  biggestWin: string | null;
+  lockedParagraphCount: number;
+};
+
+export function toPublicCritique(
+  critique: DisplayCritique,
+  unlocked: boolean,
+): PublicCritique {
+  if (unlocked) return { ...critique, lockedParagraphCount: 0 };
+
+  const visible = critique.roastParagraphs.slice(0, FREE_ROAST_PARAGRAPHS);
+  return {
+    ...critique,
+    roastParagraphs: visible,
+    biggestWin: null,
+    lockedParagraphCount: critique.roastParagraphs.length - visible.length,
+  };
 }

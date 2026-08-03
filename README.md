@@ -239,7 +239,12 @@ Behavior:
 - Creates a `Roast` row up front (`status: "processing"`) and records a `roast_submitted`
   analytics event, then captures the above-the-fold viewport (1440×900, no full-page scroll)
   with headless Chromium, along with the page title, meta description, and load time from
-  that same page load.
+  that same page load. Waits a fixed 5s after the `load` event before actually taking the
+  screenshot ([lib/screenshot.ts](lib/screenshot.ts)) — many sites still have entrance
+  animations or lazy-loaded content running past `load`, and there's no single condition that
+  reliably signals "done animating" across arbitrary third-party sites, so a blunt settle delay
+  is the pragmatic fix. Doesn't affect the `loadTimeMs` reported in the critique, which is
+  captured before the wait.
 - Uploads the screenshot to R2 and saves `screenshotUrl` on the roast (status stays
   `processing` — the roast isn't "complete" until it has a critique).
 - Sends a `roast/screenshot.captured` event to Inngest with the roast ID, screenshot URL, and
@@ -514,8 +519,9 @@ app), but it's worth knowing the trade-offs before relying on it:
   need to be bumped together deliberately rather than left on independent semver ranges. Check
   [Puppeteer's Chromium support table](https://pptr.dev/chromium-support) when upgrading either.
 - **Cold starts are slower.** Extracting the compressed binary to `/tmp` on a cold invocation adds
-  latency on top of the browser launch itself — `POST /api/roast` already sets
-  `export const maxDuration = 30`, which should cover it, but watch real p99s after deploying.
+  latency on top of the browser launch itself, plus the deliberate 5s post-load settle delay
+  in [lib/screenshot.ts](lib/screenshot.ts) — `POST /api/roast` sets `export const maxDuration =
+45` to leave real headroom for the two stacked together, but watch real p99s after deploying.
 - **Memory.** `@sparticuz/chromium` recommends 1600MB+; Vercel's default function memory may be
   lower depending on your plan. Raise it for `/api/roast` in Project Settings → Functions (with
   Fluid Compute, memory is configured there rather than in `vercel.json`).

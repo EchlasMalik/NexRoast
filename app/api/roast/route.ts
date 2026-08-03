@@ -13,9 +13,12 @@ import {
 } from "@/lib/url-validation";
 
 // Playwright needs the Node.js runtime, and browser launch + navigation +
-// upload can comfortably exceed the default serverless timeout.
+// upload can comfortably exceed the default serverless timeout. 45s (not the
+// previous 30s) leaves real headroom now that lib/screenshot.ts adds a fixed
+// 5s post-load settle delay on top of navigation (up to 15s) + a cold-start
+// browser launch + the R2 upload.
 export const runtime = "nodejs";
-export const maxDuration = 30;
+export const maxDuration = 45;
 
 // A sustained-abuse guard distinct from the burst limiter below: someone
 // patient enough to stay just under the burst limit every minute could

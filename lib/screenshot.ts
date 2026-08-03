@@ -2,6 +2,13 @@ import { chromium, type Browser } from "playwright-core";
 
 const VIEWPORT = { width: 1440, height: 900 };
 const NAVIGATION_TIMEOUT_MS = 15_000;
+// Many sites still have entrance animations, lazy-loaded images, or
+// client-side rendering running after the `load` event fires — screenshotting
+// immediately can catch things mid-fade-in or still blank. A fixed settle
+// delay is blunter than waiting for a specific condition, but there's no
+// single condition that reliably signals "animations are done" across
+// arbitrary third-party sites, so this is the pragmatic choice.
+const SETTLE_DELAY_MS = 5_000;
 
 export class ScreenshotError extends Error {}
 
@@ -56,6 +63,11 @@ export async function captureScreenshot(url: string): Promise<PageCapture> {
       throw new ScreenshotError(`Could not load "${url}": ${reason}`);
     }
     const loadTimeMs = Date.now() - startedAt;
+
+    // Deliberately after loadTimeMs is captured — that metric describes the
+    // actual page load (shown to the user via the critique), not this
+    // artificial wait.
+    await page.waitForTimeout(SETTLE_DELAY_MS);
 
     const [screenshot, title, description] = await Promise.all([
       page.screenshot({ type: "png" }),

@@ -149,18 +149,21 @@ export function RoastReportCard({
       <div className="p-6 sm:p-8">
         <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex items-start gap-4">
+            {/* The logo is a white disc on a transparent square, so it gets no
+                backing tile and no rounded-rect crop — either one shows the
+                page through the transparent corners as dark edges. */}
             <Image
               src="/NexRoast-Logo.png"
               alt=""
               width={56}
               height={56}
-              className="h-14 w-14 shrink-0 rounded-2xl bg-neutral-950 object-cover"
+              className="h-14 w-14 shrink-0 rounded-full"
             />
             <div>
-              <h1 className="text-lg leading-snug font-black text-neutral-900 sm:text-xl">
+              <h1 className="font-display text-lg leading-snug font-bold tracking-tight text-neutral-900 sm:text-xl">
                 {critique.persona}
               </h1>
-              <p className="mt-0.5 text-sm text-neutral-500">
+              <p className="mt-1 text-[13px] tracking-wide text-neutral-500">
                 NexRoast v2.0 • Brutal Mode
               </p>
             </div>
@@ -170,7 +173,7 @@ export function RoastReportCard({
 
         <hr className="my-6 border-neutral-200" />
 
-        <div className="flex flex-col gap-5 text-[15px] leading-[1.75] text-neutral-700 sm:text-base">
+        <div className="flex flex-col gap-5 font-serif text-[1.0625rem] leading-[1.7] text-neutral-700 sm:text-[1.125rem] sm:leading-[1.75]">
           <p>
             <RichText text={critique.opening} />
           </p>
@@ -195,18 +198,18 @@ export function RoastReportCard({
           )}
 
           {critique.zinger && (
-            <p className="text-neutral-600 italic">
+            <p className="border-l-2 border-orange-300 pl-4 text-neutral-600 italic">
               <RichText text={critique.zinger} />
             </p>
           )}
         </div>
 
         {critique.biggestWin && (
-          <div className="mt-6 rounded-2xl border border-orange-200 bg-orange-50 p-5">
-            <span className="text-[11px] font-bold tracking-[0.14em] text-orange-700 uppercase">
+          <div className="mt-7 rounded-2xl border border-orange-200 bg-orange-50 p-5 sm:p-6">
+            <span className="text-[11px] font-bold tracking-[0.16em] text-orange-700 uppercase">
               💡 Biggest win
             </span>
-            <p className="mt-2 text-[15px] leading-[1.75] text-neutral-800">
+            <p className="mt-2 font-serif text-[1.0625rem] leading-[1.7] text-neutral-800">
               <RichText text={critique.biggestWin} />
             </p>
           </div>

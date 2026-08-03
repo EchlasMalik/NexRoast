@@ -155,13 +155,13 @@ export function RoastStatus({ roastId }: { roastId: string }) {
 
 function LoadingScreen({ url, message }: { url?: string; message: string }) {
   return (
-    <main className="flex flex-1 flex-col items-center justify-center gap-6 bg-gradient-to-b from-neutral-950 via-neutral-950 to-orange-950 px-5 py-16 text-center sm:px-6">
+    <main className="flex flex-1 flex-col items-center justify-center gap-6 px-5 py-16 text-center sm:px-6">
       <div className="relative flex h-20 w-20 items-center justify-center">
         <div className="absolute inset-0 animate-spin rounded-full border-4 border-white/10 border-t-orange-400" />
         <span className="text-3xl">🔥</span>
       </div>
       <div className="flex flex-col items-center gap-2">
-        <h1 className="text-2xl font-black tracking-tight text-white sm:text-3xl">
+        <h1 className="font-display text-2xl font-bold tracking-tight text-white sm:text-3xl">
           Roasting{url ? ` ${new URL(url).hostname}` : " your site"}…
         </h1>
         <p
@@ -185,8 +185,8 @@ function StatusScreen({
   showHomeLink?: boolean;
 }) {
   return (
-    <main className="flex flex-1 flex-col items-center justify-center gap-4 bg-gradient-to-b from-neutral-950 via-neutral-950 to-orange-950 px-5 py-16 text-center sm:px-6">
-      <h1 className="text-2xl font-black tracking-tight text-white sm:text-3xl">
+    <main className="flex flex-1 flex-col items-center justify-center gap-4 px-5 py-16 text-center sm:px-6">
+      <h1 className="font-display text-2xl font-bold tracking-tight text-white sm:text-3xl">
         {title}
       </h1>
       <p className="max-w-sm text-base text-neutral-400">{body}</p>
@@ -217,7 +217,7 @@ function RoastResult({
   const isUnlocked = Boolean(roast.unlockedAt);
 
   return (
-    <main className="flex flex-1 flex-col items-center gap-8 bg-gradient-to-b from-neutral-950 via-neutral-950 to-orange-950 px-5 py-10 sm:px-6 sm:py-16">
+    <main className="flex flex-1 flex-col items-center gap-8 px-5 py-10 sm:px-6 sm:py-16">
       <div className="flex w-full max-w-2xl flex-col items-center gap-3 text-center">
         <p className="max-w-full truncate text-sm text-neutral-500">
           {roast.url}
@@ -226,7 +226,7 @@ function RoastResult({
         <div
           className={`flex flex-col items-center justify-center rounded-full border-4 ${style.ring} bg-white/5 px-8 py-6`}
         >
-          <span className="text-5xl font-black text-white sm:text-6xl">
+          <span className="font-display text-5xl font-bold text-white sm:text-6xl">
             {critique.score}
             <span className="text-xl font-bold text-neutral-500">/100</span>
           </span>
@@ -329,7 +329,7 @@ function PaywallCTA({
         <span className="rounded-full border border-orange-400/40 bg-orange-500/10 px-3 py-1 text-[11px] font-bold tracking-[0.12em] text-orange-300 uppercase">
           Unlocked: the polite half
         </span>
-        <p className="text-xl font-black text-white sm:text-2xl">
+        <p className="font-display text-xl font-bold tracking-tight text-white sm:text-2xl">
           Fancy the rest of the bad news?
         </p>
         <p className="max-w-md text-sm text-neutral-400">

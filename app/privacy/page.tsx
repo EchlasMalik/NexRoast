@@ -16,7 +16,9 @@ function Section({
 }) {
   return (
     <section className="flex flex-col gap-2">
-      <h2 className="text-lg font-black text-white">{title}</h2>
+      <h2 className="font-display text-lg font-bold tracking-tight text-white">
+        {title}
+      </h2>
       <div className="flex flex-col gap-3 text-sm leading-relaxed text-neutral-300 sm:text-base">
         {children}
       </div>
@@ -26,13 +28,13 @@ function Section({
 
 export default function PrivacyPolicyPage() {
   return (
-    <main className="flex flex-1 flex-col items-center gap-8 bg-gradient-to-b from-neutral-950 via-neutral-950 to-orange-950 px-5 py-16 sm:px-6">
+    <main className="flex flex-1 flex-col items-center gap-8 px-5 py-16 sm:px-6">
       <div className="flex w-full max-w-2xl flex-col gap-8">
         <div className="flex flex-col gap-2 text-center">
           <span className="text-xs font-bold tracking-[0.3em] text-orange-400 uppercase">
             NexRoast
           </span>
-          <h1 className="text-3xl font-black tracking-tight text-white sm:text-4xl">
+          <h1 className="font-display text-3xl font-bold tracking-tight text-white sm:text-4xl">
             Privacy Policy
           </h1>
           <p className="text-sm text-neutral-500">Last updated 3 August 2026</p>

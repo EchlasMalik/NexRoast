@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist, Newsreader, Space_Grotesk } from "next/font/google";
+import { SiteHeader } from "@/components/site-header";
+import { SparkField } from "@/components/spark-field";
 import "./globals.css";
 
 const AGENCY_URL = "https://nexiorastudio.com";
@@ -14,9 +16,18 @@ const geistSans = Geist({
   subsets: ["latin"],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const spaceGrotesk = Space_Grotesk({
+  variable: "--font-display",
   subsets: ["latin"],
+});
+
+// Loaded with italics because the roast's sign-off is set in them — without
+// the real italic face the browser would synthesise a slanted roman, which
+// looks noticeably wrong at the size that line is set.
+const newsreader = Newsreader({
+  variable: "--font-serif",
+  subsets: ["latin"],
+  style: ["normal", "italic"],
 });
 
 export const metadata: Metadata = {
@@ -33,9 +44,11 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${spaceGrotesk.variable} ${newsreader.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col">
+        <SparkField />
+        <SiteHeader />
         {children}
         <footer className="border-t border-white/10 bg-neutral-950 px-5 py-10 sm:px-6">
           <div className="mx-auto flex w-full max-w-5xl flex-col gap-8">
@@ -49,7 +62,7 @@ export default function RootLayout({
                   className="h-11 w-11 rounded-full"
                 />
                 <span className="flex flex-col">
-                  <span className="text-base font-black text-white">
+                  <span className="font-display text-base font-bold tracking-tight text-white">
                     NexRoast
                   </span>
                   <span className="text-xs text-neutral-500">

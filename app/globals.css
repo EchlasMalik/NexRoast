@@ -12,14 +12,26 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  /* Three roles, deliberately: Geist carries the interface, Space Grotesk
+     gives headlines their weight and character, and Newsreader makes the
+     roast itself read like a written review rather than app copy — which is
+     the whole point of that card. */
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-display), var(--font-geist-sans), sans-serif;
+  --font-serif: var(--font-serif), Georgia, "Times New Roman", serif;
+}
+
+html {
+  scroll-behavior: smooth;
+  /* Anchored sections clear the sticky header instead of hiding under it. */
+  scroll-padding-top: 5.5rem;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
 }
 
 @keyframes roast-fade-in {
@@ -30,5 +42,71 @@ body {
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+/* Embers drifting up off the fire gradient at the bottom of the page. Each
+   spark's position, size, speed and drift come from custom properties set
+   inline by components/spark-field.tsx, so one keyframe covers all of them.
+   Only transform and opacity animate — both composited, so this stays off
+   the main thread and doesn't cost layout on low-end phones. */
+@keyframes spark-rise {
+  0% {
+    transform: translate3d(0, 0, 0) scale(0.5);
+    opacity: 0;
+  }
+  15% {
+    opacity: var(--spark-opacity);
+  }
+  75% {
+    opacity: var(--spark-opacity);
+  }
+  100% {
+    transform: translate3d(var(--spark-drift), calc(-1 * var(--spark-rise)), 0)
+      scale(1);
+    opacity: 0;
+  }
+}
+
+@keyframes logo-bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.roast-spark {
+  position: absolute;
+  bottom: -12px;
+  left: var(--spark-left);
+  width: var(--spark-size);
+  height: var(--spark-size);
+  border-radius: 9999px;
+  background: var(--spark-color);
+  filter: blur(0.5px);
+  animation: spark-rise var(--spark-duration) linear var(--spark-delay) infinite;
+}
+
+.roast-logo-bob {
+  animation: logo-bob 3s ease-in-out infinite;
+}
+
+/* Anything purely decorative stops moving for people who've asked their OS
+   for less motion — the sparks are removed outright rather than frozen
+   mid-flight, which would leave dots parked at odd heights. */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  .roast-spark {
+    display: none;
+  }
+
+  .roast-logo-bob {
+    animation: none;
   }
 }

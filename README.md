@@ -433,9 +433,12 @@ different designs. Notably:
 - Downloaded via `Content-Disposition: attachment` (same pattern as the PDF report), not just
   rendered inline, since the point is a file landing on the creator's device. Downloads are
   tracked as a `tiktok_image_download` analytics event.
-- `truncate()` (shared with the landscape OG image) cuts at the last full word within budget, not
-  a raw character count — a plain slice can land mid-word (e.g. "forcing po…" instead of ending
-  cleanly after "forcing…"), which reads as broken rather than intentionally trimmed.
+- Roast point text (both here and the landscape OG image's headline) goes through
+  `firstSentences()`, not the character-count `truncate()` used for hostnames. A critique cut off
+  mid-sentence is unreadable in a static image the viewer can't scroll or click "more" on, so it
+  always keeps at least one full sentence intact — even running past its target length — rather
+  than ever fragmenting one, and only adds a second sentence if it still fits. No ellipsis: real
+  sentences already end in `./!/?`, and appending "…" after that reads as broken, not trimmed.
 
 The native share button (`ShareButton`, Web Share API with a clipboard-copy fallback) also got a
 handful of relevant hashtags appended to its share text — a cheap addition, and harmless for the

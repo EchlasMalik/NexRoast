@@ -101,6 +101,26 @@ function truncate(text: string, max: number): string {
 }
 
 /**
+ * For actual roast critique text specifically (not hostnames, which
+ * `truncate()` above still handles) — a critique cut off mid-sentence is
+ * unreadable in a static image the viewer can't scroll or click "more" on,
+ * so this always keeps at least one full sentence, even if that runs over
+ * `targetChars`, rather than ever fragmenting one. Adds more complete
+ * sentences only while they still fit. No ellipsis: real sentences already
+ * end in ./!/?, and appending "…" after that looks broken, not trimmed.
+ */
+function firstSentences(text: string, targetChars: number): string {
+  const sentences = text.match(/[^.!?]+[.!?]+(?:\s+|$)/g) ?? [text];
+  let result = "";
+  for (const sentence of sentences) {
+    const next = result + sentence;
+    if (result && next.trim().length > targetChars) break;
+    result = next;
+  }
+  return result.trim() || text.trim();
+}
+
+/**
  * Shared JSX tree for the roast OG/Twitter card image, rendered via
  * next/og's ImageResponse (Satori) — hence the explicit `display: flex`
  * on every container: Satori only lays out flex, not block, children.
@@ -193,7 +213,7 @@ export function RoastOgImage({
                   lineHeight: 1.35,
                 }}
               >
-                &ldquo;{truncate(headline, 130)}&rdquo;
+                &ldquo;{firstSentences(headline, 130)}&rdquo;
               </span>
             )}
           </div>
@@ -402,7 +422,7 @@ export function RoastTikTokImage({
                 lineHeight: 1.35,
               }}
             >
-              &ldquo;{truncate(summaryPoint.critique, 100)}&rdquo;
+              &ldquo;{firstSentences(summaryPoint.critique, 150)}&rdquo;
             </span>
           )}
 
@@ -440,7 +460,7 @@ export function RoastTikTokImage({
                   lineHeight: 1.35,
                 }}
               >
-                {truncate(secondPoint.critique, 100)}
+                {firstSentences(secondPoint.critique, 150)}
               </span>
             </div>
           )}

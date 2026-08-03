@@ -1,0 +1,8 @@
+# Belt-and-suspenders alongside .gitignore: `vercel --prod` uploads the local
+# working directory directly (not via git), so anything here must be
+# explicitly excluded regardless of git tracking status. .env in particular
+# must never reach a deployment — it has local-dev-only settings (like
+# INNGEST_DEV=1) that would silently override intended production behavior
+# if Next's automatic env loading picked them up at runtime.
+.env
+.env.*

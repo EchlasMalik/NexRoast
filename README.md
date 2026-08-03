@@ -412,18 +412,30 @@ the landscape OG image, but a separate component (`RoastTikTokImage` in
 layout, since the two jobs (link-preview card vs. standalone video content) genuinely want
 different designs. Notably:
 
+- **Shows the actual screenshot**, not just text — in a bordered "browser frame" near the top,
+  the same visual evidence the roast is talking about, not just a fact card.
+- **A real roast, not a fact card.** The layout has two distinct parts below the screenshot: a big
+  pull-quote (the first roast point, presented as the headline verdict) and a separately-boxed
+  "ALSO NEEDS WORK: {category}" section (the second roast point) — structurally similar to the
+  category cards on the roast page itself, so it reads as "here's what's actually wrong," not just
+  a score. Both are pulled from `getTikTokImageProps()`, capped at the same `FREE_ROAST_POINTS`
+  (2) as the locked roast page — this is promotional material, not a paywall leak.
 - **No clickable link to lean on.** Since this gets saved and used as a video, not viewed as a
-  webpage, the domain (`getSiteUrl()`, so it reflects the real deployment rather than a hardcoded
-  string) is shown large and explicitly as something to type in, not just implied by a link.
+  webpage, the CTA says "Click the link in bio for your free website roast" instead of showing a
+  domain — that's how creators actually drive traffic on this platform; a URL nobody can tap is
+  dead weight.
 - **Bottom clearance is deliberate.** TikTok's own UI (caption, sound title, engagement buttons)
   typically covers roughly the bottom fifth of the screen when a saved image is used as a video
   background — the layout reserves real space above that zone (asymmetric bottom padding) so the
-  domain CTA doesn't end up hidden behind TikTok's chrome.
-- **Available regardless of unlock status.** It only shows the score and the same first roast
-  point already visible on a free, locked roast page — nothing paywalled to protect.
+  CTA doesn't end up hidden behind TikTok's chrome.
+- **Available regardless of unlock status.** Same reasoning as the score/first-point exposure
+  above — nothing here is paywalled content.
 - Downloaded via `Content-Disposition: attachment` (same pattern as the PDF report), not just
   rendered inline, since the point is a file landing on the creator's device. Downloads are
   tracked as a `tiktok_image_download` analytics event.
+- `truncate()` (shared with the landscape OG image) cuts at the last full word within budget, not
+  a raw character count — a plain slice can land mid-word (e.g. "forcing po…" instead of ending
+  cleanly after "forcing…"), which reads as broken rather than intentionally trimmed.
 
 The native share button (`ShareButton`, Web Share API with a clipboard-copy fallback) also got a
 handful of relevant hashtags appended to its share text — a cheap addition, and harmless for the

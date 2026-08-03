@@ -2,7 +2,7 @@ import { ImageResponse } from "next/og";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import {
-  getOgImageProps,
+  getTikTokImageProps,
   RoastTikTokImage,
   TIKTOK_IMAGE_CONTENT_TYPE,
   TIKTOK_IMAGE_SIZE,
@@ -17,8 +17,8 @@ export const runtime = "nodejs";
  * just rendering it — the point is to get a file onto the creator's device
  * that they can drop straight into a TikTok video, not to preview it inline.
  * Available for any complete roast regardless of unlock status: it only
- * shows the score and the same first roast point already visible on a free,
- * locked roast page, so there's nothing paywalled to protect here.
+ * shows the screenshot and the same first two roast points already visible
+ * on a free, locked roast page, so there's nothing paywalled to protect here.
  */
 export async function GET(
   _request: Request,
@@ -37,7 +37,7 @@ export async function GET(
     );
   }
 
-  const props = getOgImageProps(roast);
+  const props = getTikTokImageProps(roast);
   const image = new ImageResponse(<RoastTikTokImage {...props} />, {
     ...TIKTOK_IMAGE_SIZE,
   });

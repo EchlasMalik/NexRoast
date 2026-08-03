@@ -1,6 +1,6 @@
+import type { Critique } from "@/lib/critique";
 import { CritiqueSchema } from "@/lib/critique";
 import { scoreBucket, STATUS_STYLES } from "@/lib/score-style";
-import { getSiteUrl } from "@/lib/site-url";
 
 export const OG_IMAGE_SIZE = { width: 1200, height: 630 };
 export const OG_IMAGE_CONTENT_TYPE = "image/png";
@@ -31,6 +31,52 @@ export function getOgImageProps(
   };
 }
 
+type RoastPoint = Critique["roastPoints"][number];
+
+const CATEGORY_META: Record<
+  RoastPoint["category"],
+  { label: string; icon: string }
+> = {
+  design: { label: "Design", icon: "🎨" },
+  ux: { label: "UX", icon: "🧭" },
+  conversion: { label: "Conversion", icon: "💸" },
+  speed: { label: "Speed", icon: "⚡" },
+  trust: { label: "Trust", icon: "🛡️" },
+};
+
+/**
+ * Props for the TikTok share card — needs more than the OG card (the
+ * screenshot, more than one roast point) since it's meant to stand on its
+ * own as content, not just caption a link. Capped at 2 roast points, same as
+ * FREE_ROAST_POINTS in components/roast-status.tsx: this is promotional
+ * material, not a way to leak what's behind the paywall.
+ */
+export function getTikTokImageProps(
+  roast: {
+    url: string;
+    score: number | null;
+    critique: unknown;
+    screenshotUrl: string | null;
+  } | null,
+): {
+  url: string | null;
+  score: number | null;
+  screenshotUrl: string | null;
+  roastPoints: RoastPoint[];
+} {
+  if (!roast) {
+    return { url: null, score: null, screenshotUrl: null, roastPoints: [] };
+  }
+
+  const parsed = CritiqueSchema.safeParse(roast.critique);
+  return {
+    url: roast.url,
+    score: roast.score,
+    screenshotUrl: roast.screenshotUrl,
+    roastPoints: parsed.success ? parsed.data.roastPoints.slice(0, 2) : [],
+  };
+}
+
 function hostnameOf(url: string): string {
   try {
     return new URL(url).hostname;
@@ -39,8 +85,19 @@ function hostnameOf(url: string): string {
   }
 }
 
+/**
+ * Cuts at the last full word within the budget rather than a raw character
+ * count — a plain slice can land mid-word (e.g. "forcing po…" from
+ * "…forcing poor readability"), which reads as broken rather than trimmed.
+ * Falls back to a hard cut only if there's no reasonable word boundary
+ * (e.g. one very long word), so this can't regress into never truncating.
+ */
 function truncate(text: string, max: number): string {
-  return text.length > max ? `${text.slice(0, max - 1).trimEnd()}…` : text;
+  if (text.length <= max) return text;
+  const cut = text.slice(0, max);
+  const lastSpace = cut.lastIndexOf(" ");
+  const safeCut = lastSpace > max * 0.6 ? cut.slice(0, lastSpace) : cut;
+  return `${safeCut.trimEnd()}…`;
 }
 
 /**
@@ -182,21 +239,26 @@ export function RoastOgImage({
 /**
  * Vertical (9:16) share card meant to be saved and dropped straight into a
  * TikTok/Reels video as visual content — not a link-preview card, so unlike
- * RoastOgImage above it has no clickable URL to lean on. The domain is shown
- * large and explicitly as "type this in", since a video has no link to tap.
+ * RoastOgImage above it stands on its own: it shows the actual screenshot,
+ * a real "roast summary" pull-quote (not just a fact card), and a second
+ * roast point as its own distinct "still needs work" section. No URL is
+ * shown — a video has nothing to tap, so the CTA points at the bio link
+ * instead, which is how creators actually drive traffic on this platform.
  */
 export function RoastTikTokImage({
   url,
   score,
-  headline,
+  screenshotUrl,
+  roastPoints,
 }: {
   url: string | null;
   score: number | null;
-  headline: string | null;
+  screenshotUrl: string | null;
+  roastPoints: RoastPoint[];
 }) {
   const bucket = score !== null ? scoreBucket(score) : null;
   const style = bucket ? STATUS_STYLES[bucket] : null;
-  const siteHost = new URL(getSiteUrl()).host;
+  const [summaryPoint, secondPoint] = roastPoints;
 
   return (
     <div
@@ -212,7 +274,7 @@ export function RoastTikTokImage({
         // bottom fifth of the screen when this is used as a video
         // background, so the CTA needs real clearance above that, not just
         // even padding.
-        padding: "96px 64px 360px",
+        padding: "48px 56px 360px",
         backgroundColor: "#0a0a0a",
         backgroundImage:
           "linear-gradient(160deg, #0a0a0a 0%, #0a0a0a 55%, #431407 100%)",
@@ -220,13 +282,13 @@ export function RoastTikTokImage({
         textAlign: "center",
       }}
     >
-      <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-        <span style={{ fontSize: 48 }}>🔥</span>
+      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        <span style={{ fontSize: 34 }}>🔥</span>
         <span
           style={{
-            fontSize: 40,
+            fontSize: 30,
             fontWeight: 700,
-            letterSpacing: 8,
+            letterSpacing: 6,
             color: "#fb923c",
           }}
         >
@@ -240,71 +302,147 @@ export function RoastTikTokImage({
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
-            gap: 40,
+            gap: 28,
+            width: "100%",
           }}
         >
-          {score !== null && style && (
+          {screenshotUrl && (
+            <div
+              style={{
+                display: "flex",
+                width: 968,
+                height: 605,
+                borderRadius: 16,
+                overflow: "hidden",
+                border: "3px solid rgba(255,255,255,0.15)",
+                flexShrink: 0,
+              }}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element -- rendered by
+              Satori (next/og's ImageResponse), which has no next/image support */}
+              <img
+                src={screenshotUrl}
+                alt=""
+                width={968}
+                height={605}
+                style={{ objectFit: "cover", width: "100%", height: "100%" }}
+              />
+            </div>
+          )}
+
+          <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
+            {score !== null && style && (
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  width: 160,
+                  height: 160,
+                  borderRadius: 80,
+                  border: `10px solid ${style.hex}`,
+                  backgroundColor: "rgba(255,255,255,0.04)",
+                  flexShrink: 0,
+                }}
+              >
+                <span
+                  style={{ fontSize: 56, fontWeight: 800, color: "#ffffff" }}
+                >
+                  {score}
+                </span>
+                <span
+                  style={{ fontSize: 20, fontWeight: 700, color: "#a3a3a3" }}
+                >
+                  /100
+                </span>
+              </div>
+            )}
+
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "flex-start",
+                gap: 6,
+              }}
+            >
+              {style && (
+                <span
+                  style={{
+                    display: "flex",
+                    fontSize: 30,
+                    fontWeight: 700,
+                    color: style.hex,
+                  }}
+                >
+                  🔥 {style.label}
+                </span>
+              )}
+              <span
+                style={{
+                  fontSize: 32,
+                  fontWeight: 700,
+                  color: "#ffffff",
+                  maxWidth: 700,
+                }}
+              >
+                {truncate(hostnameOf(url), 28)}
+              </span>
+            </div>
+          </div>
+
+          {summaryPoint && (
+            <span
+              style={{
+                fontSize: 40,
+                fontWeight: 700,
+                color: "#ffffff",
+                maxWidth: 950,
+                lineHeight: 1.35,
+              }}
+            >
+              &ldquo;{truncate(summaryPoint.critique, 100)}&rdquo;
+            </span>
+          )}
+
+          {secondPoint && (
             <div
               style={{
                 display: "flex",
                 flexDirection: "column",
                 alignItems: "center",
-                justifyContent: "center",
-                width: 420,
-                height: 420,
-                borderRadius: 210,
-                border: `16px solid ${style.hex}`,
-                backgroundColor: "rgba(255,255,255,0.04)",
-                flexShrink: 0,
+                gap: 10,
+                maxWidth: 950,
+                padding: "24px 32px",
+                borderRadius: 16,
+                border: "2px solid rgba(251,146,60,0.4)",
+                backgroundColor: "rgba(251,146,60,0.08)",
               }}
             >
               <span
-                style={{ fontSize: 150, fontWeight: 800, color: "#ffffff" }}
+                style={{
+                  display: "flex",
+                  fontSize: 22,
+                  fontWeight: 700,
+                  letterSpacing: 2,
+                  color: "#fb923c",
+                }}
               >
-                {score}
+                {CATEGORY_META[secondPoint.category].icon} ALSO NEEDS WORK:{" "}
+                {CATEGORY_META[secondPoint.category].label.toUpperCase()}
               </span>
-              <span style={{ fontSize: 40, fontWeight: 700, color: "#a3a3a3" }}>
-                /100
+              <span
+                style={{
+                  fontSize: 30,
+                  fontWeight: 500,
+                  color: "#e5e5e5",
+                  lineHeight: 1.35,
+                }}
+              >
+                {truncate(secondPoint.critique, 100)}
               </span>
             </div>
-          )}
-
-          {style && (
-            <span
-              style={{
-                display: "flex",
-                fontSize: 40,
-                fontWeight: 700,
-                color: style.hex,
-              }}
-            >
-              🔥 {style.label}
-            </span>
-          )}
-
-          <span
-            style={{
-              fontSize: 48,
-              fontWeight: 700,
-              color: "#ffffff",
-              maxWidth: 900,
-            }}
-          >
-            {truncate(hostnameOf(url), 32)}
-          </span>
-
-          {headline && (
-            <span
-              style={{
-                fontSize: 38,
-                fontWeight: 500,
-                color: "#e5e5e5",
-                maxWidth: 900,
-                lineHeight: 1.4,
-              }}
-            >
-              &ldquo;{truncate(headline, 110)}&rdquo;
-            </span>
           )}
         </div>
       ) : (
@@ -330,14 +468,20 @@ export function RoastTikTokImage({
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
-          gap: 8,
+          gap: 10,
         }}
       >
-        <span style={{ fontSize: 30, fontWeight: 500, color: "#a3a3a3" }}>
-          Get yours roasted free at
-        </span>
-        <span style={{ fontSize: 46, fontWeight: 800, color: "#ffffff" }}>
-          {siteHost}
+        <span style={{ fontSize: 40 }}>👆</span>
+        <span
+          style={{
+            fontSize: 42,
+            fontWeight: 800,
+            color: "#ffffff",
+            maxWidth: 820,
+            lineHeight: 1.3,
+          }}
+        >
+          Click the link in bio for your free website roast
         </span>
       </div>
     </div>

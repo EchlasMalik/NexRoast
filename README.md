@@ -185,7 +185,9 @@ generated client (gitignored — see [Notes](#notes)) exists before anything tri
   generate the share-card image via `next/og` (Next's built-in `@vercel/og`), showing the
   URL, score, and headline roast point — with a generic branded fallback for roasts that
   don't exist yet or aren't complete. A "Want it professionally done?" CTA links directly to a
-  Calendly booking page — see [Professional help CTA](#professional-help-cta) below.
+  Calendly booking page — see [Professional help CTA](#professional-help-cta) below. A
+  "Save image for TikTok 🎵" button downloads a vertical (9:16) share card — see
+  [TikTok sharing](#tiktok-sharing) below.
 - **`/privacy`** ([app/privacy/page.tsx](app/privacy/page.tsx)) — plain-English privacy policy
   describing what NexRoast actually collects and which third parties (Gemini, R2, Stripe, Vercel,
   Neon, Inngest, Calendly) it flows through. Linked from a small footer in
@@ -355,6 +357,29 @@ a paywall card that presents two options side by side, not just one — see
   all roast points and the biggest win are shown, and a "Download PDF report" button appears.
 - **"Want it professionally done?"** — see [Professional help CTA](#professional-help-cta) below.
 
+### Bypassing payment for yourself
+
+`allow_promotion_codes: true` is set on the Checkout session
+([app/api/roast/[id]/checkout/route.ts](app/api/roast/[id]/checkout/route.ts)), which adds a
+promo code field to the Stripe Checkout page. There's no user account system in this app (see
+[Prerequisites](#prerequisites) — "no signup" is a deliberate design choice), so a Stripe
+promotion code — a shared secret only you know, rather than anything tied to identity — is the
+right way to get free unlocks for creating marketing content, without touching the app's code or
+adding an auth system just for this.
+
+To set one up (do this separately in **both** Test mode and Live mode, since coupons/promo codes
+are per-mode just like [webhook endpoints](#environment-variable-checklist) — see the
+`STRIPE_WEBHOOK_SECRET` row):
+
+1. Stripe Dashboard → **Product catalog → Coupons → Create coupon**: 100% off, duration "Once"
+   (there's nothing recurring to worry about — this is a one-off payment, not a subscription).
+2. On that coupon, create a **Promotion code** — this is the actual string you'll type at
+   checkout (e.g. `ECHLASFREE`). Consider setting a max redemption count on it, so it's not an
+   unlimited-use code sitting around if it ever leaks.
+3. At checkout, click **Add promotion code** and enter it. A 100%-off redemption charges £0 —
+   Stripe's fees are percentage-based on the actual charged amount, so a genuinely free
+   transaction costs nothing, not just "no visible charge."
+
 ## Professional help CTA
 
 `BookCallCTA` in [components/roast-status.tsx](components/roast-status.tsx) is a direct external
@@ -375,21 +400,52 @@ in the UI calls it anymore. It was left in place rather than torn out (including
 since removing it is a one-way door and wasn't explicitly asked for; ask if you want it fully
 removed.
 
+## TikTok sharing
+
+TikTok has no equivalent of Twitter's "share this link as a post" intent URL — content there is
+video-first, so the actual bottleneck for someone making content with this tool isn't sharing a
+link, it's having a ready-made **visual asset** to put in a video. `GET
+/api/roast/[id]/tiktok-image` ([app/api/roast/[id]/tiktok-image/route.tsx](app/api/roast/%5Bid%5D/tiktok-image/route.tsx))
+renders a 1080×1920 (9:16) share card via `next/og`'s `ImageResponse` — same rendering approach as
+the landscape OG image, but a separate component (`RoastTikTokImage` in
+[app/roast/[id]/og-render.tsx](app/roast/[id]/og-render.tsx)) rather than a shared/conditional
+layout, since the two jobs (link-preview card vs. standalone video content) genuinely want
+different designs. Notably:
+
+- **No clickable link to lean on.** Since this gets saved and used as a video, not viewed as a
+  webpage, the domain (`getSiteUrl()`, so it reflects the real deployment rather than a hardcoded
+  string) is shown large and explicitly as something to type in, not just implied by a link.
+- **Bottom clearance is deliberate.** TikTok's own UI (caption, sound title, engagement buttons)
+  typically covers roughly the bottom fifth of the screen when a saved image is used as a video
+  background — the layout reserves real space above that zone (asymmetric bottom padding) so the
+  domain CTA doesn't end up hidden behind TikTok's chrome.
+- **Available regardless of unlock status.** It only shows the score and the same first roast
+  point already visible on a free, locked roast page — nothing paywalled to protect.
+- Downloaded via `Content-Disposition: attachment` (same pattern as the PDF report), not just
+  rendered inline, since the point is a file landing on the creator's device. Downloads are
+  tracked as a `tiktok_image_download` analytics event.
+
+The native share button (`ShareButton`, Web Share API with a clipboard-copy fallback) also got a
+handful of relevant hashtags appended to its share text — a cheap addition, and harmless for the
+other platforms that button already covers.
+
 ## Analytics
 
 A single `Event` table ([lib/analytics.ts](lib/analytics.ts)) rather than a third-party tool
 (PostHog etc.) — consistent with the rest of the stack, needs no new account/API key, and is
 enough for "lightweight." `track()` never throws; a failure is logged and swallowed so
-analytics can't be the reason a real request fails. Five event types, matching the funnel this
+analytics can't be the reason a real request fails. Seven event types, matching the funnel this
 app cares about:
 
-| Type                 | Fired from                           | Trigger                                                              |
-| -------------------- | ------------------------------------ | -------------------------------------------------------------------- |
-| `page_view`          | Client (`POST /api/analytics/event`) | Homepage or `/roast/[id]` mounts                                     |
-| `share_click`        | Client (`POST /api/analytics/event`) | Share button clicked                                                 |
-| `roast_submitted`    | Server (`POST /api/roast`)           | A `Roast` row is created                                             |
-| `paywall_conversion` | Server (Stripe webhook)              | A roast is actually unlocked (once — see the idempotency note above) |
-| `lead_submitted`     | Server (`POST /api/roast/[id]/lead`) | A real (non-honeypot) lead is saved                                  |
+| Type                    | Fired from                           | Trigger                                                                                                                        |
+| ----------------------- | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------ |
+| `page_view`             | Client (`POST /api/analytics/event`) | Homepage or `/roast/[id]` mounts                                                                                               |
+| `share_click`           | Client (`POST /api/analytics/event`) | Share button clicked                                                                                                           |
+| `book_call_click`       | Client (`POST /api/analytics/event`) | "Want it professionally done?" / "Book a call" CTA clicked                                                                     |
+| `tiktok_image_download` | Client (`POST /api/analytics/event`) | "Save image for TikTok" button clicked                                                                                         |
+| `roast_submitted`       | Server (`POST /api/roast`)           | A `Roast` row is created                                                                                                       |
+| `paywall_conversion`    | Server (Stripe webhook)              | A roast is actually unlocked (once — see the idempotency note above)                                                           |
+| `lead_submitted`        | Server (`POST /api/roast/[id]/lead`) | A real (non-honeypot) lead is saved — see [Professional help CTA](#professional-help-cta), not currently reachable from the UI |
 
 Client events go through `lib/analytics-client.ts`'s `trackClient()`, which prefers
 `navigator.sendBeacon` (survives the page unload that a share-click or navigation can trigger)
@@ -434,19 +490,19 @@ Set these in Project Settings → Environment Variables for the Production envir
 for Preview if preview deployments should work end-to-end). See
 [Environment variables](#environment-variables) above for what each one does.
 
-| Variable                                                                            | Required?   | Production note                                                                                                                                                                               |
-| ----------------------------------------------------------------------------------- | ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `DATABASE_URL`                                                                      | Required    | A real hosted Postgres, not the local `prisma dev` embedded instance — Neon's **pooled** connection string. See [connection pooling](#connection-pooling) below.                              |
-| `DIRECT_DATABASE_URL`                                                               | Recommended | Neon's **direct/unpooled** connection string, used only for `prisma migrate deploy`. See [connection pooling](#connection-pooling) below.                                                     |
-| `R2_ACCOUNT_ID` / `R2_ACCESS_KEY` / `R2_SECRET_KEY` / `R2_BUCKET` / `R2_PUBLIC_URL` | Required    | Same R2 bucket works for dev and prod; just make sure `R2_PUBLIC_URL` is genuinely public — the critique step downloads the screenshot from it directly.                                      |
-| `GEMINI_API_KEY`                                                                    | Required    | Free-tier keys work but are rate-limited well below what real traffic needs — see [Critique generation: Gemini free tier](#critique-generation-gemini-free-tier) below.                       |
-| `INNGEST_EVENT_KEY` / `INNGEST_SIGNING_KEY`                                         | Required    | From the Inngest dashboard once the app is synced (see below). Leave `INNGEST_DEV` **unset** in production — it puts the SDK in a permissive dev mode that skips signature verification.      |
-| `STRIPE_SECRET_KEY`                                                                 | Required    | Switch to a **live-mode** key (`sk_live_...`) once you're ready to take real payments; keep `sk_test_...` on Preview deployments.                                                             |
-| `STRIPE_WEBHOOK_SECRET`                                                             | Required    | From the webhook endpoint you create in the Stripe Dashboard pointing at `https://<your-domain>/api/stripe/webhook` — this is a different secret from the one `stripe listen` prints locally. |
-| `LEAD_NOTIFICATION_WEBHOOK_URL`                                                     | Optional    | Not currently used by the UI — see [Professional help CTA](#professional-help-cta). Only matters if `POST /api/roast/[id]/lead` gets wired back up to something.                              |
-| `URL_DENYLIST_DOMAINS`                                                              | Optional    |                                                                                                                                                                                               |
-| `SITE_URL`                                                                          | Optional    | Set to your real domain (e.g. `https://nexroast.app`) once one is attached — without it, `robots.txt`/`sitemap.xml` fall back to Vercel's auto-generated `*.vercel.app` production URL.       |
-| `NEXT_PUBLIC_CALENDLY_URL`                                                          | Required    | Without it, the "Want it professionally done?" CTA and the PDF's "Book a free call" button silently don't render — not a build error, just a missing conversion path.                         |
+| Variable                                                                            | Required?   | Production note                                                                                                                                                                                                                                                                                                                                                                                                |
+| ----------------------------------------------------------------------------------- | ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `DATABASE_URL`                                                                      | Required    | A real hosted Postgres, not the local `prisma dev` embedded instance — Neon's **pooled** connection string. See [connection pooling](#connection-pooling) below.                                                                                                                                                                                                                                               |
+| `DIRECT_DATABASE_URL`                                                               | Recommended | Neon's **direct/unpooled** connection string, used only for `prisma migrate deploy`. See [connection pooling](#connection-pooling) below.                                                                                                                                                                                                                                                                      |
+| `R2_ACCOUNT_ID` / `R2_ACCESS_KEY` / `R2_SECRET_KEY` / `R2_BUCKET` / `R2_PUBLIC_URL` | Required    | Same R2 bucket works for dev and prod; just make sure `R2_PUBLIC_URL` is genuinely public — the critique step downloads the screenshot from it directly.                                                                                                                                                                                                                                                       |
+| `GEMINI_API_KEY`                                                                    | Required    | Free-tier keys work but are rate-limited well below what real traffic needs — see [Critique generation: Gemini free tier](#critique-generation-gemini-free-tier) below.                                                                                                                                                                                                                                        |
+| `INNGEST_EVENT_KEY` / `INNGEST_SIGNING_KEY`                                         | Required    | From the Inngest dashboard once the app is synced (see below). Leave `INNGEST_DEV` **unset** in production — it puts the SDK in a permissive dev mode that skips signature verification.                                                                                                                                                                                                                       |
+| `STRIPE_SECRET_KEY`                                                                 | Required    | Switch to a **live-mode** key (`sk_live_...`) once you're ready to take real payments; keep `sk_test_...` on Preview deployments.                                                                                                                                                                                                                                                                              |
+| `STRIPE_WEBHOOK_SECRET`                                                             | Required    | Test mode and live mode each need their **own** webhook endpoint configured in the Stripe Dashboard (same URL, `https://<your-domain>/api/stripe/webhook`) — switching `STRIPE_SECRET_KEY` to live doesn't carry the test-mode webhook over. Create a new endpoint while the dashboard is toggled to Live mode and use _that_ signing secret; this is also different from what `stripe listen` prints locally. |
+| `LEAD_NOTIFICATION_WEBHOOK_URL`                                                     | Optional    | Not currently used by the UI — see [Professional help CTA](#professional-help-cta). Only matters if `POST /api/roast/[id]/lead` gets wired back up to something.                                                                                                                                                                                                                                               |
+| `URL_DENYLIST_DOMAINS`                                                              | Optional    |                                                                                                                                                                                                                                                                                                                                                                                                                |
+| `SITE_URL`                                                                          | Optional    | Set to your real domain (e.g. `https://nexroast.app`) once one is attached — without it, `robots.txt`/`sitemap.xml` fall back to Vercel's auto-generated `*.vercel.app` production URL.                                                                                                                                                                                                                        |
+| `NEXT_PUBLIC_CALENDLY_URL`                                                          | Required    | Without it, the "Want it professionally done?" CTA and the PDF's "Book a free call" button silently don't render — not a build error, just a missing conversion path.                                                                                                                                                                                                                                          |
 
 ### Prisma migrations
 

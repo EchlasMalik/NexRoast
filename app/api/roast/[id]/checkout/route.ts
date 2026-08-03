@@ -38,6 +38,10 @@ export async function POST(
       mode: "payment",
       client_reference_id: roast.id,
       metadata: { roastId: roast.id },
+      // Lets a promotion code field show up on the Checkout page — how a
+      // 100%-off coupon (e.g. for personal/marketing use) gets redeemed.
+      // See README's "Bypassing payment for yourself" for how to set one up.
+      allow_promotion_codes: true,
       line_items: [
         {
           quantity: 1,

@@ -9,6 +9,7 @@ const CLIENT_EVENT_TYPES: EventType[] = [
   "page_view",
   "share_click",
   "book_call_click",
+  "tiktok_image_download",
 ];
 
 export async function POST(request: NextRequest) {

@@ -329,6 +329,7 @@ function RoastResult({
 
       <div className="flex w-full max-w-2xl flex-col items-center gap-3 sm:flex-row sm:justify-center">
         <ShareButton roast={roast} critique={critique} />
+        <TikTokImageButton roastId={roast.id} />
         {isUnlocked && <DownloadReportButton roastId={roast.id} />}
         <Link
           href="/"
@@ -438,6 +439,25 @@ function DownloadReportButton({ roastId }: { roastId: string }) {
   );
 }
 
+/**
+ * Downloads the vertical share card, not a link — TikTok has no "share this
+ * webpage as a post" flow the way Twitter does, so the actual bottleneck for
+ * someone making content with this is having a ready-made vertical visual to
+ * drop into a video, not a link to send somewhere. Available regardless of
+ * unlock status: it only shows what's already visible on a free roast page.
+ */
+function TikTokImageButton({ roastId }: { roastId: string }) {
+  return (
+    <a
+      href={`/api/roast/${roastId}/tiktok-image`}
+      onClick={() => trackClient("tiktok_image_download", { roastId })}
+      className="w-full rounded-2xl border border-white/15 bg-white/5 px-6 py-3 text-center text-sm font-bold text-white transition active:scale-[0.98] sm:w-auto"
+    >
+      Save image for TikTok 🎵
+    </a>
+  );
+}
+
 function ShareButton({
   roast,
   critique,
@@ -471,7 +491,7 @@ function ShareButton({
     setShareUrl(url);
     const shareData = {
       title: "NexRoast",
-      text: `${roast.url} scored ${critique.score}/100 on NexRoast 🔥 ${critique.roastPoints[0]?.critique ?? ""}`,
+      text: `${roast.url} scored ${critique.score}/100 on NexRoast 🔥 ${critique.roastPoints[0]?.critique ?? ""}\n\n#webdesign #smallbusiness #website #roasted`,
       url,
     };
 

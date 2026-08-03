@@ -2,7 +2,7 @@ import type { EventType } from "@/lib/analytics";
 
 type ClientEventType = Extract<
   EventType,
-  "page_view" | "share_click" | "book_call_click"
+  "page_view" | "share_click" | "book_call_click" | "tiktok_image_download"
 >;
 
 /**

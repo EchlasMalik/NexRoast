@@ -7,7 +7,8 @@ export type EventType =
   | "share_click"
   | "paywall_conversion"
   | "lead_submitted"
-  | "book_call_click";
+  | "book_call_click"
+  | "tiktok_image_download";
 
 /**
  * Records a lightweight analytics event. Best-effort and non-blocking by

@@ -547,4 +547,4 @@ or Vercel's deployment health check at `/api/health`.
 - The Postgres client uses the `@prisma/adapter-pg` driver adapter (Prisma 7's client generator requires an explicit adapter rather than reading `DATABASE_URL` automatically); see `lib/prisma.ts`.
 - Inngest functions are registered at `/api/inngest` ([app/api/inngest/route.ts](app/api/inngest/route.ts)); the Inngest dev server (`npx inngest-cli@latest dev`) auto-discovers them from there.
 - The screenshot must be reachable at its R2 `screenshotUrl` for the critique step to download it — this only works once `R2_PUBLIC_URL` points at an actually-public bucket.
-"# NexRoast" 
+  "# NexRoast"

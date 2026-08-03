@@ -33,6 +33,15 @@ const nextConfig: NextConfig = {
     "playwright-core",
     "@sparticuz/chromium",
   ],
+  // serverExternalPackages keeps @sparticuz/chromium out of the webpack
+  // bundle, but its compressed Chromium binary (node_modules/@sparticuz/chromium/bin/*.br)
+  // is only ever referenced dynamically at runtime (chromium.executablePath()),
+  // never via a static import — so Next's file tracer doesn't discover it on
+  // its own and it silently gets left out of the deployed function. This
+  // forces it in for the one route that actually launches a browser.
+  outputFileTracingIncludes: {
+    "/api/roast": ["./node_modules/@sparticuz/chromium/bin/**/*"],
+  },
 };
 
 export default nextConfig;

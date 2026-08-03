@@ -5,6 +5,18 @@ const BLOCKED_HOSTNAMES = new Set(["localhost", "0.0.0.0", "::1"]);
 
 export class InvalidUrlError extends Error {}
 
+/**
+ * Most people type "domain.com" or "www.domain.com", not a full URL — being
+ * strict about the scheme here is exactly the kind of friction that makes
+ * someone bounce instead of submitting. If there's no http(s) scheme
+ * already, assume https:// rather than rejecting it; every check below
+ * (protocol, private IPs, DNS rebinding) still runs on the result, so this
+ * only relaxes what counts as *well-formed* input, not what's allowed.
+ */
+function normalizeUrlInput(input: string): string {
+  return /^https?:\/\//i.test(input) ? input : `https://${input}`;
+}
+
 function isPrivateIpv4(ip: string): boolean {
   const octets = ip.split(".").map(Number);
   const [a, b] = octets;
@@ -46,7 +58,7 @@ function isPrivateIp(ip: string): boolean {
 export async function parseAndValidatePublicUrl(input: string): Promise<URL> {
   let parsed: URL;
   try {
-    parsed = new URL(input);
+    parsed = new URL(normalizeUrlInput(input));
   } catch {
     throw new InvalidUrlError("That doesn't look like a valid URL.");
   }

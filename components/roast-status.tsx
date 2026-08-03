@@ -3,11 +3,12 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
-import type { FormEvent, RefObject } from "react";
+import { useEffect, useState } from "react";
 import { trackClient } from "@/lib/analytics-client";
 import type { Critique } from "@/lib/critique";
 import { scoreBucket, STATUS_STYLES } from "@/lib/score-style";
+
+const CALENDLY_URL = process.env.NEXT_PUBLIC_CALENDLY_URL;
 
 const LOADING_MESSAGES = [
   "Judging your font choices…",
@@ -311,19 +312,20 @@ function RoastResult({
       </div>
 
       {isUnlocked ? (
-        <div className="w-full max-w-2xl rounded-2xl border border-orange-400/30 bg-orange-500/10 p-5 text-left">
-          <span className="inline-flex items-center gap-1.5 text-xs font-bold tracking-wide text-orange-300 uppercase">
-            💡 Biggest win
-          </span>
-          <p className="mt-2 text-sm text-neutral-100 sm:text-base">
-            {critique.biggestWin}
-          </p>
-        </div>
+        <>
+          <div className="w-full max-w-2xl rounded-2xl border border-orange-400/30 bg-orange-500/10 p-5 text-left">
+            <span className="inline-flex items-center gap-1.5 text-xs font-bold tracking-wide text-orange-300 uppercase">
+              💡 Biggest win
+            </span>
+            <p className="mt-2 text-sm text-neutral-100 sm:text-base">
+              {critique.biggestWin}
+            </p>
+          </div>
+          <BookCallCTA roastId={roast.id} variant="standalone" />
+        </>
       ) : (
         <PaywallCTA roastId={roast.id} lockedCount={lockedCount} />
       )}
-
-      <GetFixedSection roast={roast} critique={critique} />
 
       <div className="flex w-full max-w-2xl flex-col items-center gap-3 sm:flex-row sm:justify-center">
         <ShareButton roast={roast} critique={critique} />
@@ -386,24 +388,41 @@ function PaywallCTA({
         <p className="text-lg font-black text-white">
           +{lockedCount} more issue{lockedCount === 1 ? "" : "s"} found
         </p>
-        <p className="max-w-sm text-sm text-neutral-400">
-          Unlock the full report to see every issue, your biggest win, and a
-          downloadable PDF.
-        </p>
-        <button
-          type="button"
-          onClick={handleUnlock}
-          disabled={loading}
-          className="w-full max-w-xs rounded-2xl bg-gradient-to-r from-orange-500 to-red-500 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-orange-500/20 transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          {loading ? "Redirecting to checkout…" : "Unlock Full Report — £9"}
-        </button>
-        {error && (
-          <p role="alert" className="text-sm font-medium text-red-400">
-            {error}
+
+        <div className="mt-1 flex w-full flex-col items-center gap-2">
+          <p className="text-base font-bold text-white">
+            Want to try to fix it yourself?
           </p>
-        )}
+          <p className="max-w-sm text-sm text-neutral-400">
+            Unlock the full report — every issue, your biggest win, and a
+            downloadable PDF.
+          </p>
+          <button
+            type="button"
+            onClick={handleUnlock}
+            disabled={loading}
+            className="w-full max-w-xs rounded-2xl bg-gradient-to-r from-orange-500 to-red-500 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-orange-500/20 transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {loading ? "Redirecting to checkout…" : "Unlock Full Report — £9"}
+          </button>
+          {error && (
+            <p role="alert" className="text-sm font-medium text-red-400">
+              {error}
+            </p>
+          )}
+        </div>
       </div>
+
+      {CALENDLY_URL && (
+        <>
+          <div className="my-5 flex items-center gap-3 text-xs font-bold tracking-wide text-neutral-500 uppercase">
+            <span className="h-px flex-1 bg-white/10" />
+            or
+            <span className="h-px flex-1 bg-white/10" />
+          </div>
+          <BookCallCTA roastId={roastId} variant="embedded" />
+        </>
+      )}
     </div>
   );
 }
@@ -511,218 +530,49 @@ function ShareButton({
   );
 }
 
-function buildLeadMessage(roast: RoastData, critique: Critique): string {
-  let hostname = roast.url;
-  try {
-    hostname = new URL(roast.url).hostname;
-  } catch {
-    // Keep the raw URL if it's somehow unparseable.
-  }
-  const topIssues = critique.roastPoints
-    .slice(0, 3)
-    .map((point) => `- ${point.critique}`)
-    .join("\n");
-
-  return `Hi Nexiora team — I'd like help fixing ${hostname} (scored ${critique.score}/100).\n\nTop issues:\n${topIssues}\n\nLet's talk about fixing this.`;
-}
-
-function GetFixedSection({
-  roast,
-  critique,
+/**
+ * Direct external link to Calendly rather than an in-app lead-capture form —
+ * anyone clicking this already knows they want a human, so send them
+ * straight to booking a slot instead of adding a form-then-email-follow-up
+ * step in between. Renders nothing if NEXT_PUBLIC_CALENDLY_URL isn't set.
+ * Two contexts: `embedded` (inside the paywall card, as the second of two
+ * options) and `standalone` (its own card, shown once a roast is unlocked).
+ */
+function BookCallCTA({
+  roastId,
+  variant,
 }: {
-  roast: RoastData;
-  critique: Critique;
+  roastId: string;
+  variant: "embedded" | "standalone";
 }) {
-  const dialogRef = useRef<HTMLDialogElement>(null);
+  if (!CALENDLY_URL) return null;
+
+  const content = (
+    <div className="flex flex-col items-center gap-2">
+      <p className="text-base font-bold text-white">
+        Want it professionally done?
+      </p>
+      <p className="max-w-sm text-sm text-neutral-400">
+        Skip the DIY — Nexiora Studio can fix every issue above. Book a free
+        call and we&apos;ll walk you through it.
+      </p>
+      <a
+        href={CALENDLY_URL}
+        target="_blank"
+        rel="noopener noreferrer"
+        onClick={() => trackClient("book_call_click", { roastId })}
+        className="w-full max-w-xs rounded-2xl bg-gradient-to-r from-orange-500 to-red-500 px-6 py-3 text-center text-sm font-bold text-white shadow-lg shadow-orange-500/20 transition active:scale-[0.98]"
+      >
+        Book a call →
+      </a>
+    </div>
+  );
+
+  if (variant === "embedded") return content;
 
   return (
     <div className="w-full max-w-2xl rounded-2xl border-2 border-orange-400/40 bg-gradient-to-br from-orange-500/10 to-red-500/10 p-6 text-center">
-      <p className="text-lg font-black text-white">Want this actually fixed?</p>
-      <p className="mx-auto mt-1 max-w-sm text-sm text-neutral-300">
-        Nexiora Studio can fix every issue above. Tell us a bit about your
-        project and we&apos;ll reach out.
-      </p>
-      <button
-        type="button"
-        onClick={() => dialogRef.current?.showModal()}
-        className="mt-4 w-full max-w-xs rounded-2xl bg-gradient-to-r from-orange-500 to-red-500 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-orange-500/20 transition active:scale-[0.98]"
-      >
-        Get this fixed for me →
-      </button>
-
-      <GetFixedDialog dialogRef={dialogRef} roast={roast} critique={critique} />
+      {content}
     </div>
-  );
-}
-
-function GetFixedDialog({
-  dialogRef,
-  roast,
-  critique,
-}: {
-  dialogRef: RefObject<HTMLDialogElement | null>;
-  roast: RoastData;
-  critique: Critique;
-}) {
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [message, setMessage] = useState(() =>
-    buildLeadMessage(roast, critique),
-  );
-  const [company, setCompany] = useState(""); // honeypot — left empty by real users
-  const [status, setStatus] = useState<
-    "idle" | "submitting" | "success" | "error"
-  >("idle");
-  const [error, setError] = useState<string | null>(null);
-
-  function close() {
-    dialogRef.current?.close();
-  }
-
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setStatus("submitting");
-    setError(null);
-
-    try {
-      const response = await fetch(`/api/roast/${roast.id}/lead`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, message, company }),
-      });
-      const data: { error?: string } = await response.json();
-
-      if (!response.ok) {
-        setError(data.error ?? "Something went wrong. Please try again.");
-        setStatus("error");
-        return;
-      }
-
-      setStatus("success");
-    } catch {
-      setError("Network error. Please try again.");
-      setStatus("error");
-    }
-  }
-
-  return (
-    <dialog
-      ref={dialogRef}
-      onClick={(event) => {
-        if (event.target === dialogRef.current) close();
-      }}
-      onClose={() => setStatus("idle")}
-      className="w-[calc(100%-2rem)] max-w-md rounded-2xl border border-white/10 bg-neutral-900 p-0 text-white backdrop:bg-black/70"
-    >
-      <div
-        className="max-h-[85vh] overflow-y-auto p-6"
-        onClick={(event) => event.stopPropagation()}
-      >
-        {status === "success" ? (
-          <div className="flex flex-col items-center gap-3 py-4 text-center">
-            <span className="text-3xl">🔥</span>
-            <p className="text-lg font-black text-white">
-              Thanks{name ? `, ${name.split(" ")[0]}` : ""}!
-            </p>
-            <p className="text-sm text-neutral-400">
-              We&apos;ll be in touch soon to talk about fixing this.
-            </p>
-            <button
-              type="button"
-              onClick={close}
-              className="mt-2 rounded-2xl bg-gradient-to-r from-orange-500 to-red-500 px-6 py-3 text-sm font-bold text-white"
-            >
-              Close
-            </button>
-          </div>
-        ) : (
-          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-            <div>
-              <h2 className="text-lg font-black text-white">
-                Get this fixed for you
-              </h2>
-              <p className="mt-1 text-sm text-neutral-400">
-                Tell us a bit about yourself and we&apos;ll reach out.
-              </p>
-            </div>
-
-            <label className="flex flex-col gap-1 text-left text-sm">
-              <span className="font-semibold text-neutral-300">Name</span>
-              <input
-                type="text"
-                required
-                value={name}
-                onChange={(event) => setName(event.target.value)}
-                className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-white outline-none focus:border-orange-400/60"
-              />
-            </label>
-
-            <label className="flex flex-col gap-1 text-left text-sm">
-              <span className="font-semibold text-neutral-300">Email</span>
-              <input
-                type="email"
-                required
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-white outline-none focus:border-orange-400/60"
-              />
-            </label>
-
-            <label className="flex flex-col gap-1 text-left text-sm">
-              <span className="font-semibold text-neutral-300">
-                Message <span className="text-neutral-500">(optional)</span>
-              </span>
-              <textarea
-                rows={5}
-                value={message}
-                onChange={(event) => setMessage(event.target.value)}
-                className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white outline-none focus:border-orange-400/60"
-              />
-            </label>
-
-            {/* Honeypot: invisible to real users, irresistible to bots that
-                auto-fill every field. Positioned off-screen rather than
-                display:none, which some basic bots specifically skip. */}
-            <label
-              aria-hidden="true"
-              className="absolute top-auto -left-[9999px] h-px w-px overflow-hidden"
-            >
-              Company
-              <input
-                type="text"
-                name="company"
-                tabIndex={-1}
-                autoComplete="off"
-                value={company}
-                onChange={(event) => setCompany(event.target.value)}
-              />
-            </label>
-
-            {error && (
-              <p role="alert" className="text-sm font-medium text-red-400">
-                {error}
-              </p>
-            )}
-
-            <div className="flex gap-3">
-              <button
-                type="button"
-                onClick={close}
-                className="w-full rounded-2xl border border-white/15 bg-white/5 px-6 py-3 text-sm font-bold text-white"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={status === "submitting"}
-                className="w-full rounded-2xl bg-gradient-to-r from-orange-500 to-red-500 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-orange-500/20 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {status === "submitting" ? "Sending…" : "Send"}
-              </button>
-            </div>
-          </form>
-        )}
-      </div>
-    </dialog>
   );
 }

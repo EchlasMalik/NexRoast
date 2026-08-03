@@ -1,6 +1,9 @@
 import type { EventType } from "@/lib/analytics";
 
-type ClientEventType = Extract<EventType, "page_view" | "share_click">;
+type ClientEventType = Extract<
+  EventType,
+  "page_view" | "share_click" | "book_call_click"
+>;
 
 /**
  * Fire-and-forget client-side event tracking. Prefers `sendBeacon` (survives

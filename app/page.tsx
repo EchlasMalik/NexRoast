@@ -52,8 +52,8 @@ export default function Home() {
         <Image
           src="/NexRoast-Logo.png"
           alt="NexRoast"
-          width={64}
-          height={64}
+          width={128}
+          height={128}
           priority
           className="rounded-full"
         />

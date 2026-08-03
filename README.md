@@ -98,24 +98,25 @@ prisma/      Prisma schema and migrations
 
 ## Environment variables
 
-| Variable                        | Description                                                                                                                                                                                                                                                             |
-| ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `DATABASE_URL`                  | PostgreSQL connection string                                                                                                                                                                                                                                            |
-| `DIRECT_DATABASE_URL`           | Optional. Direct/unpooled connection string, used only for migrations — see [Connection pooling](#connection-pooling). Falls back to `DATABASE_URL` when unset, which is correct for local dev.                                                                         |
-| `R2_ACCOUNT_ID`                 | Cloudflare account ID                                                                                                                                                                                                                                                   |
-| `R2_ACCESS_KEY`                 | R2 API token access key ID                                                                                                                                                                                                                                              |
-| `R2_SECRET_KEY`                 | R2 API token secret access key                                                                                                                                                                                                                                          |
-| `R2_BUCKET`                     | R2 bucket name                                                                                                                                                                                                                                                          |
-| `R2_PUBLIC_URL`                 | Public base URL for the bucket (its `r2.dev` subdomain, or a custom domain mapped to it) — R2 has no predictable public URL format to derive this from the other variables                                                                                              |
-| `GEMINI_API_KEY`                | Gemini API key, used to generate the roast critique. A free-tier key works for dev but is rate-limited (see [Deploying to Vercel](#deploying-to-vercel)).                                                                                                               |
-| `INNGEST_DEV`                   | Set to `1` for local dev — puts the SDK in permissive dev mode so `inngest-cli dev` can sync without a signing key. Unset in production.                                                                                                                                |
-| `INNGEST_EVENT_KEY`             | Inngest event key (deployed environments only — not needed for `inngest-cli dev`)                                                                                                                                                                                       |
-| `INNGEST_SIGNING_KEY`           | Inngest signing key (deployed environments only — not needed for `inngest-cli dev`)                                                                                                                                                                                     |
-| `STRIPE_SECRET_KEY`             | Stripe secret key (test mode locally, e.g. `sk_test_...`)                                                                                                                                                                                                               |
-| `STRIPE_WEBHOOK_SECRET`         | Signing secret for verifying webhook payloads — from `stripe listen` locally, or the webhook endpoint's signing secret in the Stripe dashboard once deployed                                                                                                            |
-| `LEAD_NOTIFICATION_WEBHOOK_URL` | Slack or Discord incoming webhook URL for "Get this fixed" lead notifications. Optional — leads still save without it, they just don't get announced.                                                                                                                   |
-| `URL_DENYLIST_DOMAINS`          | Optional, comma-separated extra hostnames/domain suffixes to block from being roasted, on top of the built-in adult-content heuristics — see [Abuse prevention](#abuse-prevention).                                                                                     |
-| `SITE_URL`                      | Canonical production URL, no trailing slash (e.g. `https://nexroast.app`) — used to build absolute links in `robots.txt`/`sitemap.xml`. Optional: falls back to Vercel's production URL, then `http://localhost:3000`. See [Deploying to Vercel](#deploying-to-vercel). |
+| Variable                        | Description                                                                                                                                                                                                                                                                                       |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `DATABASE_URL`                  | PostgreSQL connection string                                                                                                                                                                                                                                                                      |
+| `DIRECT_DATABASE_URL`           | Optional. Direct/unpooled connection string, used only for migrations — see [Connection pooling](#connection-pooling). Falls back to `DATABASE_URL` when unset, which is correct for local dev.                                                                                                   |
+| `R2_ACCOUNT_ID`                 | Cloudflare account ID                                                                                                                                                                                                                                                                             |
+| `R2_ACCESS_KEY`                 | R2 API token access key ID                                                                                                                                                                                                                                                                        |
+| `R2_SECRET_KEY`                 | R2 API token secret access key                                                                                                                                                                                                                                                                    |
+| `R2_BUCKET`                     | R2 bucket name                                                                                                                                                                                                                                                                                    |
+| `R2_PUBLIC_URL`                 | Public base URL for the bucket (its `r2.dev` subdomain, or a custom domain mapped to it) — R2 has no predictable public URL format to derive this from the other variables                                                                                                                        |
+| `GEMINI_API_KEY`                | Gemini API key, used to generate the roast critique. A free-tier key works for dev but is rate-limited (see [Deploying to Vercel](#deploying-to-vercel)).                                                                                                                                         |
+| `INNGEST_DEV`                   | Set to `1` for local dev — puts the SDK in permissive dev mode so `inngest-cli dev` can sync without a signing key. Unset in production.                                                                                                                                                          |
+| `INNGEST_EVENT_KEY`             | Inngest event key (deployed environments only — not needed for `inngest-cli dev`)                                                                                                                                                                                                                 |
+| `INNGEST_SIGNING_KEY`           | Inngest signing key (deployed environments only — not needed for `inngest-cli dev`)                                                                                                                                                                                                               |
+| `STRIPE_SECRET_KEY`             | Stripe secret key (test mode locally, e.g. `sk_test_...`)                                                                                                                                                                                                                                         |
+| `STRIPE_WEBHOOK_SECRET`         | Signing secret for verifying webhook payloads — from `stripe listen` locally, or the webhook endpoint's signing secret in the Stripe dashboard once deployed                                                                                                                                      |
+| `LEAD_NOTIFICATION_WEBHOOK_URL` | Slack or Discord incoming webhook URL for "Get this fixed" lead notifications. Optional — leads still save without it, they just don't get announced.                                                                                                                                             |
+| `URL_DENYLIST_DOMAINS`          | Optional, comma-separated extra hostnames/domain suffixes to block from being roasted, on top of the built-in adult-content heuristics — see [Abuse prevention](#abuse-prevention).                                                                                                               |
+| `SITE_URL`                      | Canonical production URL, no trailing slash (e.g. `https://nexroast.app`) — used to build absolute links in `robots.txt`/`sitemap.xml`. Optional: falls back to Vercel's production URL, then `http://localhost:3000`. See [Deploying to Vercel](#deploying-to-vercel).                           |
+| `NEXT_PUBLIC_CALENDLY_URL`      | Calendly (or similar) booking link for the "Want it professionally done?" CTA and the PDF report's "Book a free call" button — see [Professional help CTA](#professional-help-cta). `NEXT_PUBLIC_` because a client component reads it directly. Optional: that CTA just doesn't render if unset. |
 
 ## Development
 
@@ -183,9 +184,8 @@ generated client (gitignored — see [Notes](#notes)) exists before anything tri
   `twitter-image.tsx` (sharing [app/roast/[id]/og-render.tsx](app/roast/[id]/og-render.tsx))
   generate the share-card image via `next/og` (Next's built-in `@vercel/og`), showing the
   URL, score, and headline roast point — with a generic branded fallback for roasts that
-  don't exist yet or aren't complete. A "Get this fixed for me" CTA opens a form (native
-  `<dialog>`) pre-filled with a summary of the roast's top issues — see
-  [Lead capture](#lead-capture) below.
+  don't exist yet or aren't complete. A "Want it professionally done?" CTA links directly to a
+  Calendly booking page — see [Professional help CTA](#professional-help-cta) below.
 - **`/robots.txt`** ([app/robots.ts](app/robots.ts)) and **`/sitemap.xml`**
   ([app/sitemap.ts](app/sitemap.ts)) — Next's metadata route conventions, generated at request
   time. The sitemap only lists `/`: roast pages are ephemeral, per-visitor share links rather
@@ -220,9 +220,12 @@ Response (`202`):
 
 Behavior:
 
-- Validates the URL (must be `http`/`https`) and rejects requests targeting localhost,
-  private/link-local IP ranges, or hostnames that resolve to them — this endpoint drives a
-  server-side browser, so it's a classic SSRF vector without that check (`400`).
+- Validates the URL and rejects requests targeting localhost, private/link-local IP ranges, or
+  hostnames that resolve to them — this endpoint drives a server-side browser, so it's a classic
+  SSRF vector without that check (`400`). Bare domains and `www.`-prefixed input without a scheme
+  (`example.com`, `www.example.com`) are accepted and normalized to `https://` before validation
+  ([lib/url-validation.ts](lib/url-validation.ts)) — friction here is a direct bounce risk, so
+  only genuinely malformed or disallowed input gets rejected.
 - Rate-limited per IP two ways (see [Abuse prevention](#abuse-prevention)): a 5/minute burst
   limiter and a separate 10/hour sustained-abuse limiter, both `429` with `Retry-After`.
 - Rejects denylisted URLs — adult content and anything the operator has added via
@@ -293,11 +296,13 @@ URL directly.
 
 ### `POST /api/roast/[id]/lead`
 
-Saves a "Get this fixed" lead capture and (best-effort) notifies the team via
-`LEAD_NOTIFICATION_WEBHOOK_URL` ([lib/notify-lead.ts](lib/notify-lead.ts)).
+Saves a lead capture and (best-effort) notifies the team via `LEAD_NOTIFICATION_WEBHOOK_URL`
+([lib/notify-lead.ts](lib/notify-lead.ts)). **Not currently called from the UI** — see
+[Professional help CTA](#professional-help-cta) for what replaced it. Left working in case it's
+wired back up later.
 
-Request body: `{ name, email, message?, company? }` — `company` is a honeypot field (see
-[Lead capture](#lead-capture)), not a real field the form asks for.
+Request body: `{ name, email, message?, company? }` — `company` is a honeypot field, not a real
+field a form asks for.
 
 Behavior:
 
@@ -328,24 +333,36 @@ not rate-limited, same as any standard health-check endpoint.
 ## Monetization
 
 Free roasts show the first 2 roast points; the rest are teased ("+N more issues found") behind
-a paywall CTA. Paying redirects through Stripe Checkout and back to `/roast/[id]?checkout=success`;
-the actual unlock happens asynchronously via the webhook, which can lag the redirect by a
-couple of seconds, so the client briefly keeps polling (capped at ~40s) showing a "Confirming
-your payment…" message until `unlockedAt` appears. Once unlocked: all roast points and the
-biggest win are shown, and a "Download PDF report" button appears.
+a paywall card that presents two options side by side, not just one — see
+[components/roast-status.tsx](components/roast-status.tsx)'s `PaywallCTA`:
 
-## Lead capture
+- **"Want to try to fix it yourself?"** — the £9 Stripe Checkout flow, unchanged mechanically
+  from before, just reframed. Paying redirects through Checkout and back to
+  `/roast/[id]?checkout=success`; the actual unlock happens asynchronously via the webhook, which
+  can lag the redirect by a couple of seconds, so the client briefly keeps polling (capped at
+  ~40s) showing a "Confirming your payment…" message until `unlockedAt` appears. Once unlocked:
+  all roast points and the biggest win are shown, and a "Download PDF report" button appears.
+- **"Want it professionally done?"** — see [Professional help CTA](#professional-help-cta) below.
 
-The "Get this fixed for me" CTA on `/roast/[id]` opens a form (name, email, optional message)
-in a native `<dialog>` — no modal library needed, it gets focus trapping and Escape-to-close
-for free, plus a click-on-backdrop-to-close handler. The message field is pre-filled with a
-short summary of the roast's top issues (hostname, score, first 3 roast points) that the user
-can edit or clear before sending.
+## Professional help CTA
 
-Spam protection is two-layered: a honeypot field (`company`, positioned off-screen rather than
-`display:none` so more bots fall for it, invisible and unreachable by keyboard for real users)
-silently no-ops the submission if filled, and the lead route is rate-limited per IP separately
-from the roast-creation endpoint.
+`BookCallCTA` in [components/roast-status.tsx](components/roast-status.tsx) is a direct external
+link to a Calendly booking page (`NEXT_PUBLIC_CALENDLY_URL`), not an in-app form — anyone
+clicking it already knows they want to talk to a person, so it skips straight to booking a slot
+instead of adding a form-then-follow-up-email step in between. Renders nothing if the env var
+isn't set. Shown in two places: as the second half of the paywall card (before unlock), and as
+its own card below the biggest win (after unlock, since even someone who bought the DIY PDF might
+still want it done for them). Clicks are tracked as a `book_call_click` analytics event. The same
+Calendly URL also appears as a button in the downloadable PDF report — see
+[lib/pdf/roast-report.tsx](lib/pdf/roast-report.tsx).
+
+This replaced an earlier in-app "Get this fixed for me" lead-capture dialog (name/email/message
+form, honeypot spam protection, Slack/Discord notification via `LEAD_NOTIFICATION_WEBHOOK_URL`).
+That backend — `app/api/roast/[id]/lead/route.ts`, `lib/notify-lead.ts`, the `LeadCapture` Prisma
+model, the `lead_submitted` event type — is still there and still functions if called, but nothing
+in the UI calls it anymore. It was left in place rather than torn out (including the DB table)
+since removing it is a one-way door and wasn't explicitly asked for; ask if you want it fully
+removed.
 
 ## Analytics
 
@@ -415,9 +432,10 @@ for Preview if preview deployments should work end-to-end). See
 | `INNGEST_EVENT_KEY` / `INNGEST_SIGNING_KEY`                                         | Required    | From the Inngest dashboard once the app is synced (see below). Leave `INNGEST_DEV` **unset** in production — it puts the SDK in a permissive dev mode that skips signature verification.      |
 | `STRIPE_SECRET_KEY`                                                                 | Required    | Switch to a **live-mode** key (`sk_live_...`) once you're ready to take real payments; keep `sk_test_...` on Preview deployments.                                                             |
 | `STRIPE_WEBHOOK_SECRET`                                                             | Required    | From the webhook endpoint you create in the Stripe Dashboard pointing at `https://<your-domain>/api/stripe/webhook` — this is a different secret from the one `stripe listen` prints locally. |
-| `LEAD_NOTIFICATION_WEBHOOK_URL`                                                     | Optional    | Recommended in production so "Get this fixed" leads actually get seen.                                                                                                                        |
+| `LEAD_NOTIFICATION_WEBHOOK_URL`                                                     | Optional    | Not currently used by the UI — see [Professional help CTA](#professional-help-cta). Only matters if `POST /api/roast/[id]/lead` gets wired back up to something.                              |
 | `URL_DENYLIST_DOMAINS`                                                              | Optional    |                                                                                                                                                                                               |
 | `SITE_URL`                                                                          | Optional    | Set to your real domain (e.g. `https://nexroast.app`) once one is attached — without it, `robots.txt`/`sitemap.xml` fall back to Vercel's auto-generated `*.vercel.app` production URL.       |
+| `NEXT_PUBLIC_CALENDLY_URL`                                                          | Required    | Without it, the "Want it professionally done?" CTA and the PDF's "Book a free call" button silently don't render — not a build error, just a missing conversion path.                         |
 
 ### Prisma migrations
 

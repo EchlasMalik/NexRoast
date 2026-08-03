@@ -6,7 +6,8 @@ export type EventType =
   | "roast_submitted"
   | "share_click"
   | "paywall_conversion"
-  | "lead_submitted";
+  | "lead_submitted"
+  | "book_call_click";
 
 /**
  * Records a lightweight analytics event. Best-effort and non-blocking by

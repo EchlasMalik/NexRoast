@@ -1,6 +1,7 @@
 import {
   Document,
   Image,
+  Link,
   Page,
   StyleSheet,
   Text,
@@ -8,6 +9,11 @@ import {
 } from "@react-pdf/renderer";
 import type { Critique } from "@/lib/critique";
 import { scoreBucket, STATUS_STYLES } from "@/lib/score-style";
+
+// Single source of truth shared with components/roast-status.tsx's "book a
+// call" CTA — both read the same env var rather than hardcoding the URL in
+// two places.
+const CALENDLY_URL = process.env.NEXT_PUBLIC_CALENDLY_URL;
 
 const CATEGORY_LABELS: Record<
   Critique["roastPoints"][number]["category"],
@@ -137,6 +143,19 @@ const styles = StyleSheet.create({
     fontFamily: "Helvetica-Bold",
     color: "#ea580c",
   },
+  ctaButton: {
+    alignSelf: "flex-start",
+    backgroundColor: "#ea580c",
+    borderRadius: 6,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    marginBottom: 10,
+  },
+  ctaButtonText: {
+    fontSize: 11,
+    fontFamily: "Helvetica-Bold",
+    color: "#ffffff",
+  },
   footer: {
     position: "absolute",
     bottom: 24,
@@ -215,11 +234,15 @@ export function RoastReportDocument({
           </Text>
           <Text style={styles.ctaBody}>
             Nexiora Studio builds fast, high-converting websites — and we
-            already know exactly what&apos;s holding this one back. Reply to
-            this report or get in touch and we&apos;ll turn this list into a
-            plan.
+            already know exactly what&apos;s holding this one back. Book a free
+            call and we&apos;ll turn this list into a plan.
           </Text>
-          <Text style={styles.ctaContact}>hello@nexiorastudio.com</Text>
+          {CALENDLY_URL && (
+            <Link src={CALENDLY_URL} style={styles.ctaButton}>
+              <Text style={styles.ctaButtonText}>Book a free call →</Text>
+            </Link>
+          )}
+          <Text style={styles.ctaContact}>echlas@nexiorastudio.com</Text>
         </View>
 
         <Text

@@ -5,7 +5,11 @@ import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 // Only client-initiated events go through this endpoint. Events that
 // originate server-side (roast_submitted, paywall_conversion, lead_submitted)
 // call lib/analytics.ts's track() directly — no HTTP round-trip needed.
-const CLIENT_EVENT_TYPES: EventType[] = ["page_view", "share_click"];
+const CLIENT_EVENT_TYPES: EventType[] = [
+  "page_view",
+  "share_click",
+  "book_call_click",
+];
 
 export async function POST(request: NextRequest) {
   // A generous but real limit — this is a public, unauthenticated endpoint

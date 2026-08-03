@@ -13,8 +13,9 @@ Next.js 15 (App Router) + TypeScript scaffold with Tailwind CSS, ESLint, Prettie
   [Deploying to Vercel](#deploying-to-vercel))
 - [Cloudflare R2](https://developers.cloudflare.com/r2/) for screenshot storage, via the S3-compatible `@aws-sdk/client-s3`
 - [Inngest](https://www.inngest.com/) for the background job that generates the roast critique
-- [Gemini API](https://ai.google.dev/) (`gemini-3.6-flash`, via `@google/genai`) for the critique
-  itself, validated with [Zod](https://zod.dev/)
+- [Gemini API](https://ai.google.dev/) (via `@google/genai`) for the critique itself, validated
+  with [Zod](https://zod.dev/) — a 4-model fallback chain, not a single model (see
+  [Critique generation: Gemini free tier](#critique-generation-gemini-free-tier))
 - [`next/og`](https://nextjs.org/docs/app/api-reference/functions/image-response) (Next's built-in `@vercel/og`) for the per-roast share-card image
 - [Stripe Checkout](https://stripe.com/docs/checkout) for the one-off "Full Report" purchase
 - [`@react-pdf/renderer`](https://react-pdf.org/) for the downloadable full-report PDF
@@ -160,9 +161,13 @@ generated client (gitignored — see [Notes](#notes)) exists before anything tri
 
 ## Pages
 
-- **`/`** ([app/page.tsx](app/page.tsx)) — mobile-first homepage: headline, single URL input,
-  submit button. On submit, `POST /api/roast` and redirect to `/roast/[id]`; validation and
-  rate-limit errors from the API are shown inline without redirecting.
+- **`/`** ([app/page.tsx](app/page.tsx)) — mobile-first homepage: logo, headline, single URL
+  input, submit button. On submit, `POST /api/roast` and redirect to `/roast/[id]`; validation and
+  rate-limit errors from the API are shown inline without redirecting. The logo doubles as the
+  favicon — see [app/icon.png](app/icon.png), Next's file-convention icon (auto-detected, no code
+  needed), resized down from `public/NexRoast-Logo.png` with `sharp` (already present as a
+  transitive `next`/`sharp` dependency — see [Notes](#notes)) since the source was 1254×1254 and
+  749KB, way oversized for a favicon.
 - **`/roast/[id]`** ([app/roast/[id]/page.tsx](app/roast/[id]/page.tsx),
   [components/roast-status.tsx](components/roast-status.tsx)) — polls
   `GET /api/roast/[id]` every 2s while `status` is `pending`/`processing`, showing a
@@ -237,8 +242,8 @@ Behavior:
 
 Triggered by `roast/screenshot.captured` ([lib/inngest/functions.ts](lib/inngest/functions.ts)).
 Downloads the screenshot (Gemini takes images as inline base64 data, not a URL it fetches itself
-— unlike the Claude API this originally used) and sends it plus the scraped metadata to Gemini
-(`gemini-3.6-flash`), asking for a structured critique validated against a Zod schema
+— unlike the Claude API this originally used) and sends it plus the scraped metadata to Gemini,
+asking for a structured critique validated against a Zod schema
 ([lib/critique.ts](lib/critique.ts)):
 
 - `score`: 0–100 overall quality.
@@ -248,13 +253,20 @@ Downloads the screenshot (Gemini takes images as inline base64 data, not a URL i
 
 The critique is requested via Gemini's structured output (`responseJsonSchema`, generated from
 the Zod schema with `z.toJSONSchema()`), and — since constrained generation isn't the same
-guarantee as the schema-validated parse the previous Claude integration got from
-`messages.parse()` — the response is explicitly re-validated against the Zod schema **and** a
-basic profanity/safety filter ([lib/moderation.ts](lib/moderation.ts)) on receipt. If it fails to
-parse, validate, or pass moderation, the function retries once with a fresh model call — a
-moderation failure is treated the same as a parse failure and regenerated, not silently redacted,
-since the goal is a clean roast, not one with words blanked out. If the retry also fails, the roast is marked
-`failed`. On success, the roast is updated with `critique`, `score`, and `status: "complete"`.
+guarantee as a schema-validated parse — the response is explicitly re-validated against the Zod
+schema **and** a basic profanity/safety filter ([lib/moderation.ts](lib/moderation.ts)) on
+receipt.
+
+Rather than one model, `MODELS` in `lib/critique.ts` is an ordered fallback chain of four
+(`gemini-3.6-flash` → `gemini-3.5-flash` → `gemini-3.5-flash-lite` → `gemini-3.1-flash-lite`) —
+see [Critique generation: Gemini free tier](#critique-generation-gemini-free-tier) for why. For
+each model, up to two attempts are made: if a response fails to parse, validate, or pass
+moderation, it retries once on the _same_ model with a fresh call — a moderation failure is
+treated the same as a parse failure and regenerated, not silently redacted, since the goal is a
+clean roast, not one with words blanked out. A `429` (rate limit) is different: it skips straight
+to the _next_ model rather than retrying a model that's already exhausted for the minute. Only
+once every model in the chain has failed does the roast get marked `failed`. On success, it's
+updated with `critique`, `score`, and `status: "complete"`.
 
 ### `POST /api/roast/[id]/checkout`
 
@@ -499,15 +511,25 @@ whichever API key that vendor requires.
 
 ### Critique generation: Gemini free tier
 
-`lib/critique.ts` calls Gemini (`gemini-3.6-flash`) once per roast, twice if the moderation retry
-fires. A free-tier `GEMINI_API_KEY` works, but as of writing the free tier is capped around
-**10 requests/minute and 1,500/day** platform-wide for the key (not per-IP — check current numbers
-at [aistudio.google.com/rate-limit](https://aistudio.google.com/rate-limit), they change). That's
-lower than what this app's own per-IP rate limiters allow through (see
+`lib/critique.ts` calls Gemini once per roast, twice per model if the moderation retry fires. A
+free-tier `GEMINI_API_KEY` works, but as of writing the free tier is capped around
+**10 requests/minute and 1,500/day** platform-wide for the key, _per model_ (not per-IP — check
+current numbers at [aistudio.google.com/rate-limit](https://aistudio.google.com/rate-limit), they
+change). That's lower than what this app's own per-IP rate limiters allow through (see
 [Abuse prevention](#abuse-prevention)), meaning **Google's cap, not this app's, is the real
 bottleneck** once there's any concurrent traffic — a handful of people roasting sites at the same
-time can exhaust it. There's no queue or backoff in front of `generateCritique()`; a request that
-gets throttled just fails the roast (marked `failed`).
+time can exhaust a single model's quota.
+
+To absorb that, `generateCritique()` doesn't call just one model — `MODELS` is an ordered fallback
+chain (currently four: `gemini-3.6-flash`, `gemini-3.5-flash`, `gemini-3.5-flash-lite`,
+`gemini-3.1-flash-lite`). Each Gemini model has its own separate rate-limit bucket, so a `429` on
+one moves to the next rather than failing the roast outright — see the
+[Inngest: generate-roast-critique](#inngest-generate-roast-critique) section above for the exact
+retry-vs-fallback logic. All four were verified directly against the API (not just docs, which
+drift) for multimodal input + structured JSON output, and none are preview/experimental models.
+This buys real headroom (4× the effective throughput, roughly) but doesn't remove the ceiling
+entirely — enough sustained concurrent traffic can still exhaust all four in the same minute, at
+which point the roast is marked `failed` (there's still no queue or backoff, just a wider net).
 
 Also worth knowing: on the free tier, Google may use submitted prompts and images — i.e. the
 screenshots people submit and the critiques generated from them — to improve their products, and
@@ -547,4 +569,4 @@ or Vercel's deployment health check at `/api/health`.
 - The Postgres client uses the `@prisma/adapter-pg` driver adapter (Prisma 7's client generator requires an explicit adapter rather than reading `DATABASE_URL` automatically); see `lib/prisma.ts`.
 - Inngest functions are registered at `/api/inngest` ([app/api/inngest/route.ts](app/api/inngest/route.ts)); the Inngest dev server (`npx inngest-cli@latest dev`) auto-discovers them from there.
 - The screenshot must be reachable at its R2 `screenshotUrl` for the critique step to download it — this only works once `R2_PUBLIC_URL` points at an actually-public bucket.
-  "# NexRoast"
+- `sharp` (used once, to generate `app/icon.png` from the source logo) isn't an explicit dependency — it's already present transitively via `next`'s own Image Optimization support. If that ever changes, add it explicitly rather than relying on the transitive install.

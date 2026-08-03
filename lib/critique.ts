@@ -1,9 +1,22 @@
-import { GoogleGenAI } from "@google/genai";
+import { ApiError, GoogleGenAI } from "@google/genai";
 import { z } from "zod";
 import { isCritiqueSafe } from "@/lib/moderation";
 
 const client = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-const MODEL = "gemini-3.6-flash";
+
+// Ordered fallback chain, not just a single model. Each Gemini model has its
+// own separate free-tier rate-limit bucket, so when one gets rate-limited
+// (429), moving to the next model gets a genuinely fresh quota rather than
+// hitting the same wall again — see generateCritique() below. All four are
+// pinned, non-preview, free-tier-eligible models, verified directly against
+// the API (not just docs, which drift) for both multimodal image input and
+// structured JSON output — the two things this app actually needs.
+const MODELS = [
+  "gemini-3.6-flash",
+  "gemini-3.5-flash",
+  "gemini-3.5-flash-lite",
+  "gemini-3.1-flash-lite",
+] as const;
 
 export const RoastCategory = z.enum([
   "design",
@@ -80,23 +93,22 @@ async function fetchScreenshotAsInlineData(
   };
 }
 
-async function requestCritique(input: {
-  screenshotUrl: string;
-  title: string;
-  description: string | null;
-  loadTimeMs: number;
-}): Promise<Critique | null> {
-  const image = await fetchScreenshotAsInlineData(input.screenshotUrl);
-
-  // Transient API errors (503 "high demand", 429 quota, network blips —
-  // all observed in practice on the free tier) are treated the same as a
-  // parse/moderation failure: return null and let the existing retry-once
-  // in generateCritique() take another swing, rather than throwing and
-  // failing the whole roast on what's often a one-off hiccup.
+async function requestCritique(
+  image: { data: string; mimeType: string },
+  input: { title: string; description: string | null; loadTimeMs: number },
+  model: string,
+): Promise<Critique | null> {
+  // Transient API errors (503 "high demand", network blips — observed in
+  // practice on the free tier) are treated the same as a parse/moderation
+  // failure: return null and let generateCritique()'s retry take another
+  // swing, rather than failing the whole roast on what's often a one-off
+  // hiccup. A 429 (rate limit) is different — retrying the *same* model
+  // would just hit the same wall, so it's rethrown for generateCritique()
+  // to catch and move on to the next model instead.
   let response;
   try {
     response = await client.models.generateContent({
-      model: MODEL,
+      model,
       contents: [
         {
           role: "user",
@@ -119,7 +131,8 @@ async function requestCritique(input: {
       },
     });
   } catch (error) {
-    console.error("Gemini generateContent call failed", error);
+    if (error instanceof ApiError && error.status === 429) throw error;
+    console.error(`Gemini generateContent call failed (${model})`, error);
     return null;
   }
 
@@ -132,11 +145,13 @@ async function requestCritique(input: {
 /**
  * Generates a structured roast critique from a screenshot + page metadata,
  * validating the response against `CritiqueSchema` and running it through a
- * basic profanity/safety filter. Retries once (a single fresh model call) if
- * the first response fails to parse, validate, or pass moderation — a
- * moderation failure is treated the same as a parse failure rather than
- * silently sanitizing the text, since we want a clean regeneration, not a
- * roast with words blanked out.
+ * basic profanity/safety filter. Works through MODELS in order; for each
+ * model, retries once (a single fresh call) if the response fails to parse,
+ * validate, or pass moderation — a moderation failure is treated the same as
+ * a parse failure rather than silently sanitizing the text, since we want a
+ * clean regeneration, not a roast with words blanked out. A rate-limit error
+ * skips straight to the next model instead of burning a retry on one that's
+ * already exhausted for the minute.
  */
 export async function generateCritique(input: {
   screenshotUrl: string;
@@ -144,13 +159,22 @@ export async function generateCritique(input: {
   description: string | null;
   loadTimeMs: number;
 }): Promise<Critique> {
-  const first = await requestCritique(input);
-  if (first && isCritiqueSafe(first)) return first;
+  const image = await fetchScreenshotAsInlineData(input.screenshotUrl);
 
-  const retry = await requestCritique(input);
-  if (retry && isCritiqueSafe(retry)) return retry;
+  for (const model of MODELS) {
+    for (let attempt = 0; attempt < 2; attempt++) {
+      let result: Critique | null;
+      try {
+        result = await requestCritique(image, input, model);
+      } catch (error) {
+        if (error instanceof ApiError && error.status === 429) break;
+        throw error;
+      }
+      if (result && isCritiqueSafe(result)) return result;
+    }
+  }
 
   throw new CritiqueGenerationError(
-    "Gemini did not return a valid, safe critique after one retry.",
+    "No Gemini model returned a valid, safe critique after trying all fallbacks.",
   );
 }

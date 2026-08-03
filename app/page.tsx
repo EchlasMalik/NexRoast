@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import type { FormEvent } from "react";
 import { trackClient } from "@/lib/analytics-client";
@@ -48,6 +49,14 @@ export default function Home() {
   return (
     <main className="flex flex-1 flex-col items-center justify-center gap-10 bg-gradient-to-b from-neutral-950 via-neutral-950 to-orange-950 px-5 py-16 text-center sm:px-6">
       <div className="flex flex-col items-center gap-4">
+        <Image
+          src="/NexRoast-Logo.png"
+          alt="NexRoast"
+          width={64}
+          height={64}
+          priority
+          className="rounded-full"
+        />
         <span className="text-xs font-bold tracking-[0.3em] text-orange-400 uppercase">
           NexRoast
         </span>

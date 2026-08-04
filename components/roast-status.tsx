@@ -520,7 +520,7 @@ function BookCallCTA({
       </p>
       <p className="max-w-sm text-sm text-neutral-400">
         Skip the DIY — Nexiora Studio can fix every issue above. Book a free
-        call and we&apos;ll walk you through it.
+        call and we&apos;ll make you a FREE mockup of what your website could look like.
       </p>
       <a
         href={CALENDLY_URL}

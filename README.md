@@ -374,7 +374,7 @@ are per-mode just like [webhook endpoints](#environment-variable-checklist) — 
 1. Stripe Dashboard → **Product catalog → Coupons → Create coupon**: 100% off, duration "Once"
    (there's nothing recurring to worry about — this is a one-off payment, not a subscription).
 2. On that coupon, create a **Promotion code** — this is the actual string you'll type at
-   checkout (e.g. `ECHLASFREE`). Consider setting a max redemption count on it, so it's not an
+   checkout (e.g. `FREE`). Consider setting a max redemption count on it, so it's not an
    unlimited-use code sitting around if it ever leaks.
 3. At checkout, click **Add promotion code** and enter it. A 100%-off redemption charges £0 —
    Stripe's fees are percentage-based on the actual charged amount, so a genuinely free

@@ -124,9 +124,9 @@ export default function Home() {
             Free · No signup
           </span>
           <h1 className="font-display max-w-[19rem] text-[2.6rem] leading-[1.02] font-bold tracking-[-0.03em] text-balance text-white sm:max-w-2xl sm:text-7xl">
-            Your website is about to get{" "}
+            Your website is about to GET{" "}
             <span className="bg-gradient-to-r from-orange-400 via-red-400 to-pink-500 bg-clip-text text-transparent">
-              roasted
+              ROASTED
             </span>
             .
           </h1>

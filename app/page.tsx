@@ -231,16 +231,34 @@ export default function Home() {
       >
         <ul className="mx-auto grid w-full max-w-3xl gap-3">
           {FAQ.map((item) => (
-            <li
-              key={item.question}
-              className="rounded-2xl border border-white/10 bg-white/[0.04] p-6 text-left"
-            >
-              <h3 className="font-display text-base font-bold tracking-tight text-white sm:text-lg">
-                {item.question}
-              </h3>
-              <p className="mt-2 text-[0.9375rem] leading-relaxed text-neutral-400">
-                {item.answer}
-              </p>
+            <li key={item.question}>
+              {/* A native <details> rather than a state-driven accordion: the
+                  disclosure behaviour, keyboard support and correct ARIA all
+                  come for free, and it still works before hydration. */}
+              <details className="group rounded-2xl border border-white/10 bg-white/[0.04] text-left transition open:border-orange-400/30 hover:border-orange-400/30">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-4 p-6 group-open:pb-3 [&::-webkit-details-marker]:hidden">
+                  <h3 className="font-display text-base font-bold tracking-tight text-white sm:text-lg">
+                    {item.question}
+                  </h3>
+                  <svg
+                    viewBox="0 0 24 24"
+                    aria-hidden
+                    className="h-5 w-5 shrink-0 text-orange-400 transition-transform duration-200 group-open:rotate-180"
+                  >
+                    <path
+                      d="M6 9l6 6 6-6"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </summary>
+                <p className="px-6 pb-6 text-[0.9375rem] leading-relaxed text-neutral-400">
+                  {item.answer}
+                </p>
+              </details>
             </li>
           ))}
         </ul>

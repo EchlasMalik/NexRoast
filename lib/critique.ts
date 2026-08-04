@@ -44,12 +44,15 @@ export const CritiqueSchema = z.object({
     .describe(
       "Opening paragraph: first impression of the page, credit where it's due, then the first hint of trouble.",
     ),
+  // Three is the floor, not a stylistic preference: one paragraph is free and
+  // at least two have to stay locked, or the paid upgrade is asking £9 to
+  // reveal a single sentence. See MIN_LOCKED_PARAGRAPHS below.
   roastParagraphs: z
     .array(z.string())
-    .min(2)
-    .max(3)
+    .min(3)
+    .max(4)
     .describe(
-      "2 to 3 paragraphs, each taking apart one concrete problem and what it costs.",
+      "3 to 4 paragraphs, each taking apart one concrete problem and what it costs.",
     ),
   silverLining: z
     .string()
@@ -60,6 +63,11 @@ export const CritiqueSchema = z.object({
     .string()
     .describe(
       "A single-sentence sign-off in the form 'Brand: <pithy contradiction> — <what to do about it>.' ending in one emoji.",
+    ),
+  hook: z
+    .string()
+    .describe(
+      "The single most savage line in the whole review, written to be read aloud over a video. Max 20 words, no markdown, no emoji.",
     ),
   biggestWin: z
     .string()
@@ -95,13 +103,15 @@ score — 0 to 100 for overall quality as a landing page: how well it converts, 
 
 opening — one paragraph. Set the scene with a comparison, give genuine credit for whatever is working, then land the first hint that something is badly off.
 
-roastParagraphs — two or three paragraphs, one problem each, in descending order of how much it is costing them. Open each one by quoting the actual evidence you can see: the exact headline wording, the specific claim in the hero, the nav labels, the number in the stat block, the load time in milliseconds. Take the mickey out of it properly — that quoted detail is your setup, so give it a punchline. Then make the cost concrete and human: the visitor who bounced, the enquiry that went to a competitor with a clearer call to action, the customer who did not trust it enough to hand over card details, the ad budget spent sending traffic to a page that was never going to convert it. Aim for "that is very funny and also I am now worried", not one or the other.
+roastParagraphs — three or four paragraphs, one problem each, in descending order of how much it is costing them. Open each one by quoting the actual evidence you can see: the exact headline wording, the specific claim in the hero, the nav labels, the number in the stat block, the load time in milliseconds. Take the mickey out of it properly — that quoted detail is your setup, so give it a punchline. Then make the cost concrete and human: the visitor who bounced, the enquiry that went to a competitor with a clearer call to action, the customer who did not trust it enough to hand over card details, the ad budget spent sending traffic to a page that was never going to convert it. Aim for "that is very funny and also I am now worried", not one or the other.
 
 silverLining — one paragraph on what genuinely works, and mean it. Do not begin with the words "the silver lining" — that heading is added separately. Faint praise is fine; empty praise is not.
 
 zinger — one sentence, in the shape "BrandName: <two things in ironic contradiction> — <the thing they should do before it gets worse>." Finish with exactly one emoji that fits the business. Keep it under 30 words.
 
 biggestWin — the single change that would move the needle most, framed around what they are actively losing by not fixing it.
+
+hook — the one line from this review most likely to make a stranger stop scrolling. Pick the most savage, most quotable observation you made and sharpen it: under 20 words, present tense, no markdown, no emoji, no brand name needed. It has to work with no context at all, read aloud over a video, by someone who has never seen this website. Think "your load time is longer than the average attention span" — a complete, brutal thought that stands on its own. This is the line that sells the whole thing, so make it the best one you have.
 
 FORMATTING:
 - Wrap the two or three most load-bearing phrases in each paragraph in **double asterisks** for bold — especially anything quoted directly off the page and any number.
@@ -260,6 +270,7 @@ export type DisplayCritique = {
   roastParagraphs: string[];
   silverLining: string | null;
   zinger: string | null;
+  hook: string | null;
   biggestWin: string;
 };
 
@@ -288,6 +299,7 @@ export function normalizeCritique(raw: unknown): DisplayCritique | null {
     ),
     silverLining: null,
     zinger: null,
+    hook: null,
     biggestWin: legacy.data.biggestWin,
   };
 }
@@ -299,6 +311,16 @@ export function normalizeCritique(raw: unknown): DisplayCritique | null {
  * remaining problems and the single biggest win.
  */
 export const FREE_ROAST_PARAGRAPHS = 1;
+
+/**
+ * The paywall has to be worth crossing. "+1 more problem" does not persuade
+ * anyone to spend £9 — it reads as a rounding error, and the reader assumes
+ * they have already seen the interesting part. Two withheld problems is the
+ * floor at which the locked block looks like it is actually hiding
+ * something, so this wins over FREE_ROAST_PARAGRAPHS when the two conflict:
+ * a short critique shows fewer free paragraphs rather than locking fewer.
+ */
+export const MIN_LOCKED_PARAGRAPHS = 2;
 
 /**
  * The critique as sent to the browser. Locked paragraphs and the biggest win
@@ -316,11 +338,21 @@ export function toPublicCritique(
 ): PublicCritique {
   if (unlocked) return { ...critique, lockedParagraphCount: 0 };
 
-  const visible = critique.roastParagraphs.slice(0, FREE_ROAST_PARAGRAPHS);
+  const total = critique.roastParagraphs.length;
+  // Generation guarantees 3-4 paragraphs, so this normally yields the
+  // intended 1 free / 2-3 locked. The clamp is what holds the invariant for
+  // legacy roasts, whose paragraph count came from a different schema
+  // entirely and can be as low as one.
+  const visibleCount = Math.max(
+    0,
+    Math.min(FREE_ROAST_PARAGRAPHS, total - MIN_LOCKED_PARAGRAPHS),
+  );
+  const visible = critique.roastParagraphs.slice(0, visibleCount);
+
   return {
     ...critique,
     roastParagraphs: visible,
     biggestWin: null,
-    lockedParagraphCount: critique.roastParagraphs.length - visible.length,
+    lockedParagraphCount: total - visibleCount,
   };
 }

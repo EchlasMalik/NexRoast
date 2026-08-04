@@ -1,6 +1,7 @@
 import { ImageResponse } from "next/og";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getSiteUrl } from "@/lib/site-url";
 import {
   getTikTokImageProps,
   RoastTikTokImage,
@@ -38,9 +39,16 @@ export async function GET(
   }
 
   const props = getTikTokImageProps(roast);
-  const image = new ImageResponse(<RoastTikTokImage {...props} />, {
-    ...TIKTOK_IMAGE_SIZE,
-  });
+  // Satori fetches images over HTTP rather than reading the filesystem, so
+  // the logo has to be an absolute URL — a bare "/NexRoast-Logo.png" has no
+  // origin to resolve against inside image generation.
+  const image = new ImageResponse(
+    <RoastTikTokImage
+      {...props}
+      logoUrl={`${getSiteUrl()}/NexRoast-Logo.png`}
+    />,
+    { ...TIKTOK_IMAGE_SIZE },
+  );
   const buffer = await image.arrayBuffer();
 
   let filename = "nexroast-tiktok.png";

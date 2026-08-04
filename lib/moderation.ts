@@ -17,6 +17,7 @@ export function isCritiqueSafe(critique: Critique): boolean {
     ...critique.roastParagraphs,
     critique.silverLining,
     critique.zinger,
+    critique.hook,
     critique.biggestWin,
   ].join(" \n");
 

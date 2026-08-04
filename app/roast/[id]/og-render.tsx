@@ -39,11 +39,18 @@ export function getOgImageProps(
 }
 
 /**
- * Props for the TikTok share card — needs more than the OG card (the
- * screenshot, a real pull-quote) since it's meant to stand on its own as
- * content, not just caption a link. Only ever carries the parts of a roast
- * that are free on the page anyway: this is promotional material, not a way
- * around the paywall.
+ * Props for the TikTok share card.
+ *
+ * The headline is the critique's `hook` — the line the model is asked to
+ * write specifically to stop a stranger scrolling. That is deliberately not
+ * the opening paragraph, which is the softest thing in the review: it opens
+ * with a comparison and hands out credit before it gets to the point, which
+ * is right for a written review and useless as a three-second hook.
+ *
+ * Everything here is content that is free on the roast page anyway. This
+ * endpoint is public — anyone holding a roast ID can fetch the image — so
+ * pulling the locked paragraphs in for extra spice would quietly hand away
+ * what the £9 is for.
  */
 export function getTikTokImageProps(
   roast: {
@@ -56,29 +63,23 @@ export function getTikTokImageProps(
   url: string | null;
   score: number | null;
   screenshotUrl: string | null;
-  persona: string | null;
-  pullQuote: string | null;
-  zinger: string | null;
+  hook: string | null;
 } {
   if (!roast) {
-    return {
-      url: null,
-      score: null,
-      screenshotUrl: null,
-      persona: null,
-      pullQuote: null,
-      zinger: null,
-    };
+    return { url: null, score: null, screenshotUrl: null, hook: null };
   }
 
   const critique = normalizeCritique(roast.critique);
+  // Legacy roasts predate `hook`, so they fall back through the sign-off to
+  // the opening — worse hooks, but never a blank card.
+  const headline =
+    critique && (critique.hook ?? critique.zinger ?? critique.opening);
+
   return {
     url: roast.url,
     score: roast.score,
     screenshotUrl: roast.screenshotUrl,
-    persona: critique?.persona ?? null,
-    pullQuote: critique ? stripEmphasis(critique.opening) : null,
-    zinger: critique?.zinger ? stripEmphasis(critique.zinger) : null,
+    hook: headline ? stripEmphasis(headline) : null,
   };
 }
 
@@ -288,28 +289,35 @@ export function RoastOgImage({
 }
 
 /**
- * Vertical (9:16) share card meant to be saved and dropped straight into a
- * TikTok/Reels video as visual content — not a link-preview card, so unlike
- * RoastOgImage above it stands on its own: it shows the actual screenshot,
- * the score and survival rating, a real pull-quote from the review, and the
- * critic's sign-off as its own punchline panel. No URL is shown — a video has
- * nothing to tap, so the CTA points at the bio link instead, which is how
- * creators actually drive traffic on this platform.
+ * Vertical (9:16) share card, built to be dropped into a TikTok/Reels video
+ * as a background clip rather than posted as a static image — so the layout
+ * is organised around the platform's furniture, not around looking balanced
+ * in isolation:
+ *
+ * - The top ~120px and bottom ~420px are left clear. TikTok overlays the
+ *   caption, username, sound title and the engagement rail over those bands,
+ *   and anything placed there gets covered on playback.
+ * - Everything readable sits in the middle third, in the order a viewer
+ *   processes it: who is being roasted, the evidence, the number, then the
+ *   line worth stopping for.
+ * - The hook is set at 54px because it has to survive being watched at
+ *   phone size, half-attention, with the sound off.
+ * - The persona and sign-off are dropped entirely. They are good on the
+ *   page and they are clutter here — a hook competing with two other pieces
+ *   of copy stops being a hook.
  */
 export function RoastTikTokImage({
   url,
   score,
   screenshotUrl,
-  persona,
-  pullQuote,
-  zinger,
+  hook,
+  logoUrl,
 }: {
   url: string | null;
   score: number | null;
   screenshotUrl: string | null;
-  persona: string | null;
-  pullQuote: string | null;
-  zinger: string | null;
+  hook: string | null;
+  logoUrl: string;
 }) {
   const bucket = score !== null ? scoreBucket(score) : null;
   const style = bucket ? STATUS_STYLES[bucket] : null;
@@ -322,28 +330,41 @@ export function RoastTikTokImage({
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
-        justifyContent: "space-between",
-        // Asymmetric bottom padding is deliberate: TikTok's own UI (caption,
-        // sound title, engagement buttons) typically overlays roughly the
-        // bottom fifth of the screen when this is used as a video
-        // background, so the CTA needs real clearance above that, not just
-        // even padding.
-        padding: "48px 56px 360px",
+        // Centred within the padding box rather than pinned to the top, so
+        // the block stays balanced whether or not there's a screenshot to
+        // show. The asymmetric padding is the safe area, not styling.
+        justifyContent: "center",
+        padding: "110px 60px 380px",
         backgroundColor: "#0a0a0a",
         backgroundImage:
-          "linear-gradient(160deg, #0a0a0a 0%, #0a0a0a 55%, #431407 100%)",
+          "linear-gradient(165deg, #0a0a0a 0%, #0a0a0a 48%, #2c1006 78%, #4a1608 100%)",
         fontFamily: "sans-serif",
         textAlign: "center",
       }}
     >
-      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-        <span style={{ fontSize: 34 }}>🔥</span>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 18,
+          marginBottom: 44,
+        }}
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element -- rendered by
+        Satori (next/og's ImageResponse), which has no next/image support */}
+        <img
+          src={logoUrl}
+          alt=""
+          width={78}
+          height={78}
+          style={{ borderRadius: 39 }}
+        />
         <span
           style={{
-            fontSize: 30,
-            fontWeight: 700,
-            letterSpacing: 6,
-            color: "#fb923c",
+            fontSize: 40,
+            fontWeight: 800,
+            letterSpacing: 7,
+            color: "#ffffff",
           }}
         >
           NEXROAST
@@ -356,164 +377,149 @@ export function RoastTikTokImage({
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
-            gap: 28,
             width: "100%",
           }}
         >
+          <span
+            style={{
+              display: "flex",
+              fontSize: 30,
+              fontWeight: 700,
+              letterSpacing: 4,
+              color: "#fb923c",
+              marginBottom: 14,
+            }}
+          >
+            WE ROASTED
+          </span>
+          <span
+            style={{
+              fontSize: 46,
+              fontWeight: 800,
+              color: "#ffffff",
+              marginBottom: 30,
+            }}
+          >
+            {truncate(hostnameOf(url), 30)}
+          </span>
+
           {screenshotUrl && (
             <div
               style={{
                 display: "flex",
-                width: 968,
-                height: 605,
-                borderRadius: 16,
+                width: 960,
+                height: 500,
+                borderRadius: 22,
                 overflow: "hidden",
-                border: "3px solid rgba(255,255,255,0.15)",
+                border: "4px solid rgba(255,255,255,0.14)",
                 flexShrink: 0,
               }}
             >
-              {/* eslint-disable-next-line @next/next/no-img-element -- rendered by
-              Satori (next/og's ImageResponse), which has no next/image support */}
+              {/* eslint-disable-next-line @next/next/no-img-element -- Satori again */}
               <img
                 src={screenshotUrl}
                 alt=""
-                width={968}
-                height={605}
+                width={960}
+                height={500}
                 style={{ objectFit: "cover", width: "100%", height: "100%" }}
               />
             </div>
           )}
 
-          <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
-            {score !== null && style && (
+          {score !== null && style && (
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 26,
+                marginTop: 34,
+              }}
+            >
               <div
                 style={{
                   display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  width: 160,
-                  height: 160,
-                  borderRadius: 80,
-                  border: `10px solid ${style.hex}`,
+                  alignItems: "baseline",
+                  padding: "14px 34px",
+                  borderRadius: 20,
+                  border: `5px solid ${style.hex}`,
                   backgroundColor: "rgba(255,255,255,0.04)",
-                  flexShrink: 0,
                 }}
               >
                 <span
-                  style={{ fontSize: 56, fontWeight: 800, color: "#ffffff" }}
+                  style={{ fontSize: 74, fontWeight: 800, color: "#ffffff" }}
                 >
                   {score}
                 </span>
                 <span
-                  style={{ fontSize: 20, fontWeight: 700, color: "#a3a3a3" }}
+                  style={{ fontSize: 30, fontWeight: 700, color: "#a3a3a3" }}
                 >
                   /100
                 </span>
               </div>
-            )}
 
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "flex-start",
-                gap: 6,
-              }}
-            >
-              {style && (
-                <span
-                  style={{
-                    display: "flex",
-                    fontSize: 30,
-                    fontWeight: 700,
-                    color: style.hex,
-                  }}
-                >
-                  🔥 {style.label}
-                </span>
-              )}
-              <span
+              <div
                 style={{
-                  fontSize: 32,
-                  fontWeight: 700,
-                  color: "#ffffff",
-                  maxWidth: 700,
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "flex-start",
+                  gap: 6,
                 }}
               >
-                {truncate(hostnameOf(url), 28)}
-              </span>
-              {score !== null && (
-                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <span style={{ display: "flex", fontSize: 26 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <span style={{ display: "flex", fontSize: 34 }}>
                     {starRow(score)}
                   </span>
+                  {/* The count in words, because only the filled stars are
+                      drawn — without it a two-star rating is just two stars
+                      with no scale to read them against. */}
                   <span
                     style={{
                       display: "flex",
-                      fontSize: 22,
+                      fontSize: 26,
                       fontWeight: 700,
-                      letterSpacing: 2,
                       color: "#a3a3a3",
                     }}
                   >
                     {survivalStars(score)}/{SURVIVAL_MAX} SURVIVAL
                   </span>
                 </div>
-              )}
-            </div>
-          </div>
-
-          {pullQuote && (
-            <span
-              style={{
-                fontSize: 40,
-                fontWeight: 700,
-                color: "#ffffff",
-                maxWidth: 950,
-                lineHeight: 1.35,
-              }}
-            >
-              &ldquo;{firstSentences(pullQuote, 150)}&rdquo;
-            </span>
-          )}
-
-          {zinger && (
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                gap: 10,
-                maxWidth: 950,
-                padding: "24px 32px",
-                borderRadius: 16,
-                border: "2px solid rgba(251,146,60,0.4)",
-                backgroundColor: "rgba(251,146,60,0.08)",
-              }}
-            >
-              {persona && (
                 <span
                   style={{
                     display: "flex",
-                    fontSize: 22,
+                    fontSize: 28,
                     fontWeight: 700,
-                    letterSpacing: 2,
-                    color: "#fb923c",
+                    color: style.hex,
                   }}
                 >
-                  {truncate(persona.toUpperCase(), 46)}
+                  {style.label.toUpperCase()}
                 </span>
-              )}
+              </div>
+            </div>
+          )}
+
+          {hook && (
+            <div
+              style={{
+                display: "flex",
+                marginTop: 40,
+                maxWidth: 960,
+                padding: "34px 40px",
+                borderRadius: 22,
+                borderLeft: "10px solid #f97316",
+                backgroundColor: "rgba(249,115,22,0.10)",
+              }}
+            >
               <span
                 style={{
-                  fontSize: 30,
-                  fontWeight: 500,
-                  color: "#e5e5e5",
-                  lineHeight: 1.35,
+                  fontSize: 54,
+                  fontWeight: 800,
+                  color: "#ffffff",
+                  lineHeight: 1.25,
+                  textAlign: "left",
                 }}
               >
-                {firstSentences(zinger, 150)}
+                &ldquo;{firstSentences(hook, 150)}&rdquo;
               </span>
             </div>
           )}
@@ -524,37 +530,41 @@ export function RoastTikTokImage({
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
-            gap: 16,
+            gap: 20,
           }}
         >
-          <span style={{ fontSize: 64, fontWeight: 800, color: "#ffffff" }}>
+          <span style={{ fontSize: 72, fontWeight: 800, color: "#ffffff" }}>
             Get your website roasted.
           </span>
-          <span style={{ fontSize: 34, fontWeight: 500, color: "#a3a3a3" }}>
+          <span style={{ fontSize: 36, fontWeight: 500, color: "#a3a3a3" }}>
             A free, brutally honest AI critique.
           </span>
         </div>
       )}
 
+      {/* Sits directly under the content rather than pinned to the bottom of
+          the canvas — the bottom of the frame belongs to TikTok's own UI. */}
       <div
         style={{
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
-          gap: 10,
+          gap: 8,
+          marginTop: 48,
         }}
       >
-        <span style={{ fontSize: 40 }}>👆</span>
         <span
           style={{
-            fontSize: 42,
+            fontSize: 34,
             fontWeight: 800,
-            color: "#ffffff",
-            maxWidth: 820,
-            lineHeight: 1.3,
+            letterSpacing: 3,
+            color: "#fb923c",
           }}
         >
-          Click the link in bio for your free website roast
+          ROAST YOURS FREE
+        </span>
+        <span style={{ fontSize: 28, fontWeight: 600, color: "#a3a3a3" }}>
+          link in bio
         </span>
       </div>
     </div>

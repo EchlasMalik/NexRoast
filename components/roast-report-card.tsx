@@ -68,12 +68,14 @@ function SurvivalRating({ score }: { score: number }) {
   );
 }
 
-// Fixed line widths so the placeholder reads as two real paragraphs of prose
+// Fixed line widths so the placeholder reads as real paragraphs of prose
 // rather than an obviously generated block — and so it doesn't reflow on
-// every render the way random widths would.
+// every render the way random widths would. One entry per hidden paragraph,
+// so the blur visibly grows with the number of problems being withheld.
 const LOCKED_LINE_WIDTHS = [
   ["100%", "94%", "98%", "61%"],
   ["100%", "89%", "73%"],
+  ["100%", "96%", "87%", "48%"],
 ];
 
 /**
@@ -89,17 +91,19 @@ function LockedParagraphs({ count }: { count: number }) {
         aria-hidden
         className="pointer-events-none flex flex-col gap-5 blur-[3px] select-none"
       >
-        {LOCKED_LINE_WIDTHS.map((paragraph, paragraphIndex) => (
-          <div key={paragraphIndex} className="flex flex-col gap-2.5">
-            {paragraph.map((width, lineIndex) => (
-              <div
-                key={lineIndex}
-                style={{ width }}
-                className="h-3.5 rounded bg-neutral-200"
-              />
-            ))}
-          </div>
-        ))}
+        {LOCKED_LINE_WIDTHS.slice(0, Math.max(2, count)).map(
+          (paragraph, paragraphIndex) => (
+            <div key={paragraphIndex} className="flex flex-col gap-2.5">
+              {paragraph.map((width, lineIndex) => (
+                <div
+                  key={lineIndex}
+                  style={{ width }}
+                  className="h-3.5 rounded bg-neutral-200"
+                />
+              ))}
+            </div>
+          ),
+        )}
       </div>
 
       <div className="absolute inset-0 flex items-center justify-center">

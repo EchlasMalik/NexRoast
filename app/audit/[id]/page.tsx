@@ -142,6 +142,20 @@ export default async function AuditPage({
     about: { "@type": "WebSite", name: audit.displayName, url: audit.url },
     publisher: { "@type": "Organization", name: "NexRoast" },
     description: report.summary,
+    // Declares the paywall honestly. The same HTML goes to crawlers and to
+    // visitors — the withheld issues are removed server-side for both — and
+    // this says plainly which region is paid. Gating indexed content without
+    // saying so is the pattern that reads as cloaking.
+    isAccessibleForFree: audit.unlocked,
+    ...(audit.unlocked
+      ? {}
+      : {
+          hasPart: {
+            "@type": "WebPageElement",
+            isAccessibleForFree: false,
+            cssSelector: ".paid-audit-content",
+          },
+        }),
   };
 
   return (
@@ -171,6 +185,7 @@ export default async function AuditPage({
         auditId={audit.id}
         displayName={audit.displayName}
         score={report.overallScore}
+        unlocked={audit.unlocked}
       />
     </main>
   );

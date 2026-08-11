@@ -11,10 +11,12 @@ export function ShareActions({
   auditId,
   displayName,
   score,
+  unlocked,
 }: {
   auditId: string;
   displayName: string;
   score: number;
+  unlocked: boolean;
 }) {
   const [status, setStatus] = useState<"idle" | "copied" | "failed">("idle");
   const [shareUrl, setShareUrl] = useState("");
@@ -74,13 +76,17 @@ export function ShareActions({
               : "Share this audit"}
         </button>
 
-        <a
-          href={`/api/audit/${auditId}/report.pdf`}
-          onClick={() => trackClient("pdf_download", { auditId })}
-          className={ACTION_CLASS}
-        >
-          Download PDF
-        </a>
+        {/* Only offered once paid — the route returns 402 either way, but
+            showing a button that always fails is just a worse error message. */}
+        {unlocked && (
+          <a
+            href={`/api/audit/${auditId}/report.pdf`}
+            onClick={() => trackClient("pdf_download", { auditId })}
+            className={ACTION_CLASS}
+          >
+            Download PDF
+          </a>
+        )}
 
         <a
           href={`/api/audit/${auditId}/share-image`}

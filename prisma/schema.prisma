@@ -56,6 +56,11 @@ model Audit {
   createdAt   DateTime  @default(now())
   completedAt DateTime?
 
+  /// Set by the Stripe webhook when the full audit is paid for. Null means the
+  /// free view: the score, category breakdown and first issues are public, the
+  /// remaining issues and the PDF are not.
+  unlockedAt DateTime?
+
   events Event[]
 
   /// Sitemap and canonical-duplicate lookups.

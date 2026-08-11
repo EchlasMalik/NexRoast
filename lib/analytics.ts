@@ -9,7 +9,9 @@ export type EventType =
   | "tiktok_image_download"
   | "pdf_download"
   | "book_call_click"
-  | "copy_fix_clicked";
+  | "copy_fix_clicked"
+  | "checkout_started"
+  | "paywall_conversion";
 
 /**
  * Records a lightweight analytics event.

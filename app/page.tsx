@@ -32,9 +32,9 @@ const HOW_IT_WORKS = [
 
 const FAQ = [
   {
-    question: "Is it actually free?",
+    question: "Is it free?",
     answer:
-      "Yes — the whole audit. Score, category breakdown, every issue we found, the recommendations and a PDF. There's no locked section and nothing to upgrade to.",
+      "Running an audit is free, and the free version is a real audit: your score, all nine category scores with the checks behind them, what the site does well, and the highest-priority issues in full. £19 unlocks the rest — every remaining issue with its fix and suggested wording, the ordered action plan, and a PDF you can send to whoever builds the site.",
   },
   {
     question: "How is the score calculated?",

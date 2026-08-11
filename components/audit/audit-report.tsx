@@ -1,5 +1,6 @@
 import Image from "next/image";
 import { CopyButton } from "@/components/audit/copy-button";
+import { LockedIssues } from "@/components/audit/paywall";
 import {
   bandFor,
   CATEGORIES,
@@ -314,6 +315,9 @@ export function AuditReport({ audit }: { audit: PublicAudit }) {
                 auditId={audit.id}
               />
             ))}
+            {audit.lockedIssueCount > 0 && (
+              <LockedIssues auditId={audit.id} count={audit.lockedIssueCount} />
+            )}
           </ul>
         </Section>
 
@@ -340,6 +344,14 @@ export function AuditReport({ audit }: { audit: PublicAudit }) {
               {report.biggestOpportunity}
             </p>
           </div>
+
+          {!audit.unlocked && (
+            <p className="mt-4 text-sm text-neutral-500">
+              The ordered action plan is part of the full audit — it lists every
+              issue by priority, including the {audit.lockedIssueCount} not
+              shown above.
+            </p>
+          )}
 
           {report.suggestedActions.length > 0 && (
             <ol className="mt-4 flex flex-col gap-2.5">

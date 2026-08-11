@@ -20,7 +20,7 @@ export async function GET(
 
   const audit = await prisma.audit.findUnique({
     where: { id },
-    select: { status: true, businessName: true },
+    select: { status: true, businessName: true, unlockedAt: true },
   });
 
   if (!audit) {
@@ -28,7 +28,13 @@ export async function GET(
   }
 
   return NextResponse.json(
-    { status: audit.status, businessName: audit.businessName },
+    {
+      status: audit.status,
+      businessName: audit.businessName,
+      // Booleans only — the timestamp is nobody's business, and this endpoint
+      // is what the paywall polls after returning from Stripe.
+      unlocked: audit.unlockedAt !== null,
+    },
     { headers: { "Cache-Control": "no-store" } },
   );
 }

@@ -46,6 +46,15 @@ export async function GET(
     );
   }
 
+  // Gate the file itself, not just the button. Otherwise the paywall is a
+  // suggestion for anyone who guesses or bookmarks this URL.
+  if (!row.unlockedAt) {
+    return NextResponse.json(
+      { error: "The PDF report is part of the full audit." },
+      { status: 402 },
+    );
+  }
+
   const audit = toPublicAudit(row);
   if (!audit) {
     console.error("Stored report failed validation", row.id);

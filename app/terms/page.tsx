@@ -51,8 +51,10 @@ export default function TermsPage() {
           <p>
             You give us a URL. We load that page, take a screenshot of its
             publicly visible content, measure it, send what we found to an AI
-            model, and show you back a score and a written audit. All of it is
-            free.
+            model, and show you back a score and a written audit. The score, the
+            full category breakdown, what the site does well and the
+            highest-priority issues are free; the remaining issues and the PDF
+            report are the paid part.
           </p>
           <p>
             It is an automated review of a single page. It is not a substitute
@@ -116,16 +118,40 @@ export default function TermsPage() {
           </p>
         </Section>
 
-        <Section title="It's free">
+        <Section title="Free and paid">
           <p>
-            The audit is free. There is no paid tier, no locked section and
-            nothing to upgrade to — the score, every issue we found, the
-            recommendations and the PDF are all included at no charge.
+            Every audit is free to run, and the free version is a real audit —
+            the overall score, all nine category scores with the individual
+            checks behind them, the written summary, what the site does well,
+            and the highest-priority issues in full.
           </p>
           <p>
-            If that changes in future, any paid feature would be additional to
-            what is free today, and priced clearly before you commit to
-            anything.
+            The full audit is a one-off payment of £19 (GBP), including any VAT
+            where applicable. It unlocks the remaining issues with their fixes
+            and suggested wording, the ordered action plan, and the downloadable
+            PDF report. Payment is taken by Stripe; we never see or store your
+            card details. Access is granted to that specific audit link and does
+            not expire.
+          </p>
+          <p>
+            The price shown at checkout is the price you pay. If we change
+            pricing, it only applies to purchases made afterwards.
+          </p>
+        </Section>
+
+        <Section title="Cancellation and refunds">
+          <p>
+            The full audit is digital content delivered immediately. By
+            purchasing, you ask us to supply it straight away and you
+            acknowledge that you lose the 14-day right to cancel under the
+            Consumer Contracts (Information, Cancellation and Additional
+            Charges) Regulations 2013 once delivery has begun.
+          </p>
+          <p>
+            That said: if the report fails to unlock, arrives broken, or plainly
+            isn&apos;t what was described, email us and we&apos;ll refund you.
+            We&apos;d rather fix it than argue about it. Nothing here affects
+            your statutory rights.
           </p>
         </Section>
 
@@ -151,10 +177,10 @@ export default function TermsPage() {
         <Section title="Liability">
           <p>
             To the extent permitted by law, our total liability to you in
-            connection with NexRoast is limited to the amount you have paid us,
-            which for a free audit is nothing. We aren&apos;t liable for
-            indirect or consequential losses, including lost profits, lost
-            business, or lost data.
+            connection with NexRoast is limited to the amount you have paid us
+            for the audit in question, which for a free audit is nothing. We
+            aren&apos;t liable for indirect or consequential losses, including
+            lost profits, lost business, or lost data.
           </p>
           <p>
             Nothing in these terms limits liability for death or personal injury

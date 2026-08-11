@@ -90,6 +90,10 @@ export type PublicAudit = {
   indexable: boolean;
   createdAt: Date;
   completedAt: Date | null;
+  /** True once paid. Drives the PDF gate and what the card renders. */
+  unlocked: boolean;
+  /** How many issues are withheld. 0 when unlocked or when there were none. */
+  lockedIssueCount: number;
   report: AuditReport;
 };
 
@@ -102,13 +106,54 @@ type AuditRow = {
   indexable: boolean;
   createdAt: Date;
   completedAt: Date | null;
+  unlockedAt: Date | null;
   report: unknown;
 };
 
-export function toPublicAudit(row: AuditRow): PublicAudit | null {
-  const report = parseReport(row.report);
-  if (!report) return null;
+/**
+ * Issues shown before paying.
+ *
+ * Two, not one: a single issue reads as a teaser, and the free audit still has
+ * to stand on its own as a public, indexable page and as something worth
+ * sharing. The score, every category breakdown, the summary and the strengths
+ * are never gated — only the depth is.
+ */
+export const FREE_ISSUES = 2;
 
+/**
+ * Applies the paywall by *removing* content, not hiding it.
+ *
+ * The locked issues never leave the server, so the blurred block in the UI is
+ * decorative and there is nothing to recover from view-source or the network
+ * tab. This is the whole reason gating lives here rather than in the component.
+ */
+function gateReport(
+  report: AuditReport,
+  unlocked: boolean,
+): { report: AuditReport; lockedIssueCount: number } {
+  if (unlocked) return { report, lockedIssueCount: 0 };
+
+  const visible = report.issues.slice(0, FREE_ISSUES);
+
+  return {
+    lockedIssueCount: report.issues.length - visible.length,
+    report: {
+      ...report,
+      issues: visible,
+      // The action plan is a view over the full issue set, so publishing it
+      // would leak the titles of everything withheld.
+      suggestedActions: [],
+      quickWins: [],
+    },
+  };
+}
+
+export function toPublicAudit(row: AuditRow): PublicAudit | null {
+  const parsed = parseReport(row.report);
+  if (!parsed) return null;
+
+  const unlocked = row.unlockedAt !== null;
+  const { report, lockedIssueCount } = gateReport(parsed, unlocked);
   const name = row.businessName ?? report.businessName;
 
   return {
@@ -124,6 +169,8 @@ export function toPublicAudit(row: AuditRow): PublicAudit | null {
     indexable: row.indexable,
     createdAt: row.createdAt,
     completedAt: row.completedAt,
+    unlocked,
+    lockedIssueCount,
     report,
   };
 }

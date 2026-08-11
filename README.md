@@ -5,9 +5,11 @@ it, has a model judge what only a human eye can judge, and publishes a public,
 shareable audit at `/audit/{id}` — a score out of 100 across nine areas, prioritised
 issues with evidence, and paste-ready copy rewrites.
 
-The audit is free and complete. There is no paywall. Public audits are the growth loop:
-they're built to be shared and indexed, and they funnel businesses that need help toward
-[Nexiora Studio](https://nexiorastudio.com).
+Running an audit is free, and the free version is substantial: the score, all nine
+category breakdowns, the summary, the strengths and the highest-priority issues in full.
+**£19** unlocks the remaining issues, the ordered action plan and the PDF. Public audits
+are the growth loop — built to be shared and indexed, and to funnel businesses that need
+help toward [Nexiora Studio](https://nexiorastudio.com).
 
 ## Stack
 
@@ -157,18 +159,44 @@ _set_ them:
 Absent `INNGEST_DEV`, the SDK runs in cloud mode and requires the two keys above; its own
 error is explicit about it.
 
-**Optional:** `STRIPE_SECRET_KEY` — only for `lib/billing/`, which nothing in the audit
-flow imports. See below.
+**Payments** — required for the paid tier; without them the audit still runs and the
+unlock button returns a clean "payments aren't available" error:
+
+| Variable                | Used for                                                                                       |
+| ----------------------- | ---------------------------------------------------------------------------------------------- |
+| `STRIPE_SECRET_KEY`     | Creating the Checkout session                                                                  |
+| `STRIPE_WEBHOOK_SECRET` | Verifying the webhook that actually grants access. Per-mode — the Test and Live secrets differ |
 
 ## Billing
 
-There isn't any. The audit is free, and the £9 report paywall was removed along with the
-Stripe checkout and webhook routes.
+One-off **£19** unlocks the full audit. `lib/billing/` owns the Stripe client and
+`createAuditCheckoutSession`; `lib/billing/price.ts` holds the numbers separately so the
+client-side paywall button can read the label without pulling the Stripe SDK into the
+browser bundle.
 
-`lib/billing/` keeps the Stripe client, key handling and API-version pin so a future
-premium tier (monitoring, audit history, competitor comparison, white-label reports)
-doesn't have to rebuild that wiring. Nothing in the audit flow imports it — that's the
-point.
+**What is free:** the overall score, all nine category scores with every underlying
+check, the summary, the strengths, and the first `FREE_ISSUES` (2) issues in full.
+
+**What is paid:** the remaining issues with their fixes and copy rewrites, the ordered
+action plan, and the PDF.
+
+Gating happens in `toPublicAudit` (`lib/audit/public.ts`) by **removing** the locked
+issues server-side, so nothing withheld is recoverable from view-source or the network
+tab — the blur in the UI is decoration over an absence. The PDF route independently
+returns 402, because gating a button is not gating a file.
+
+`unlockedAt` is set only by the Stripe webhook, never by the `?checkout=success`
+redirect, which is just a URL anyone can type. The webhook is idempotent: it updates
+`where: { unlockedAt: null }` so Stripe's at-least-once delivery can't overwrite the
+original timestamp or double-count the conversion.
+
+Since audits are indexable, the page declares the paywall in structured data
+(`isAccessibleForFree: false` plus a `hasPart` region). The same HTML goes to crawlers
+and visitors — gating indexed content _without_ declaring it is what reads as cloaking.
+
+Free audits for yourself: `allow_promotion_codes` is on, so a 100%-off Stripe coupon
+works without a code path for it. Coupons are per-mode — create them separately in Test
+and Live.
 
 ## Indexing
 

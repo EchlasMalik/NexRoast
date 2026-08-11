@@ -7,8 +7,8 @@ import {
   CATEGORY_METER,
   type CategoryKey,
 } from "@/lib/audit/categories";
-import type { PublicAudit } from "@/lib/audit/public";
-import type { CategoryResult, ScoredIssue } from "@/lib/audit/scoring";
+import type { PublicAudit, PublicCategory } from "@/lib/audit/public";
+import type { ScoredIssue } from "@/lib/audit/scoring";
 
 /**
  * The audit report — a white document card on the dark page.
@@ -66,9 +66,8 @@ function ScoreHero({ audit }: { audit: PublicAudit }) {
   );
 }
 
-function CategoryMeter({ category }: { category: CategoryResult }) {
+function CategoryMeter({ category }: { category: PublicCategory }) {
   const meta = CATEGORIES[category.key];
-  const passed = category.criteria.filter((c) => c.verdict === "pass").length;
 
   return (
     <details className="group border-b border-neutral-200 last:border-b-0">
@@ -118,8 +117,12 @@ function CategoryMeter({ category }: { category: CategoryResult }) {
           client JS on a page built to render without it, and this works on
           touch, in print and for screen readers. */}
       <div className="pb-4 pl-0 sm:pl-36">
+        {/* Counts are the true totals, not the length of the visible list —
+            the score has to stay explainable even when half the checks behind
+            it are gated. */}
         <p className="mb-3 text-xs text-neutral-500">
-          {meta.blurb} {passed} of {category.criteria.length} checks passed.
+          {meta.blurb} {category.criteriaPassed} of {category.criteriaTotal}{" "}
+          checks passed.
         </p>
         <ul className="flex flex-col gap-1.5">
           {category.criteria.map((criterion) => (
@@ -152,6 +155,34 @@ function CategoryMeter({ category }: { category: CategoryResult }) {
               </span>
             </li>
           ))}
+
+          {category.criteriaHidden > 0 && (
+            <li className="paid-audit-content relative mt-1 overflow-hidden rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2.5">
+              {/* Grey bars over an absence — the withheld checks are stripped
+                  server-side, so there is nothing here to un-blur. */}
+              <div
+                aria-hidden
+                className="pointer-events-none flex flex-col gap-1.5 blur-[2.5px] select-none"
+              >
+                {Array.from({
+                  length: Math.min(category.criteriaHidden, 3),
+                }).map((_, index) => (
+                  <div
+                    key={index}
+                    style={{ width: `${86 - index * 14}%` }}
+                    className="h-2.5 rounded bg-neutral-300"
+                  />
+                ))}
+              </div>
+              <div className="absolute inset-0 flex items-center justify-center">
+                <span className="text-[11px] font-semibold text-neutral-600">
+                  🔒 {category.criteriaHidden} more{" "}
+                  {category.criteriaHidden === 1 ? "check" : "checks"} in the
+                  full audit
+                </span>
+              </div>
+            </li>
+          )}
         </ul>
       </div>
     </details>

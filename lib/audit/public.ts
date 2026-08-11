@@ -4,7 +4,11 @@ import {
   ARCHETYPES,
   CATEGORY_KEYS,
 } from "@/lib/audit/categories";
-import type { AuditReport } from "@/lib/audit/scoring";
+import type {
+  AuditReport,
+  CategoryResult,
+  CriterionResult,
+} from "@/lib/audit/scoring";
 
 /**
  * Reading a stored report back out of the database.
@@ -94,7 +98,23 @@ export type PublicAudit = {
   unlocked: boolean;
   /** How many issues are withheld. 0 when unlocked or when there were none. */
   lockedIssueCount: number;
-  report: AuditReport;
+  report: PublicReport;
+};
+
+/**
+ * A category as rendered. Carries the *true* criterion totals alongside the
+ * possibly-truncated list, so the "4 of 9 checks passed" line stays accurate
+ * even when half the checks themselves are behind the paywall.
+ */
+export type PublicCategory = CategoryResult & {
+  criteriaTotal: number;
+  criteriaPassed: number;
+  /** How many checks in this category are withheld. 0 once unlocked. */
+  criteriaHidden: number;
+};
+
+export type PublicReport = Omit<AuditReport, "categories"> & {
+  categories: PublicCategory[];
 };
 
 type AuditRow = {
@@ -124,17 +144,57 @@ type AuditRow = {
 export const FREE_ISSUES = 1;
 
 /**
+ * Every other check is withheld from a free audit — roughly half per category.
+ *
+ * Taking alternate entries rather than the first half is deliberate: criteria
+ * are stored measured-first, so a straight `slice` would show every measured
+ * check and hide every judged one (or the reverse), which reads as a category
+ * of one kind. Alternating keeps a representative mix of measured and judged,
+ * and of passes and failures — a preview that is only good news would misprice
+ * the site to its owner.
+ */
+function halveCriteria(criteria: CriterionResult[]): CriterionResult[] {
+  return criteria.filter((_, index) => index % 2 === 0);
+}
+
+/**
  * Applies the paywall by *removing* content, not hiding it.
  *
- * The locked issues never leave the server, so the blurred block in the UI is
+ * Nothing withheld leaves the server, so the blurred blocks in the UI are
  * decorative and there is nothing to recover from view-source or the network
  * tab. This is the whole reason gating lives here rather than in the component.
+ *
+ * The headline numbers are never gated: the overall score, every category
+ * score, and the true passed/total counts all stay visible, so the free audit
+ * remains an honest summary rather than a number with nothing behind it.
  */
 function gateReport(
   report: AuditReport,
   unlocked: boolean,
-): { report: AuditReport; lockedIssueCount: number } {
-  if (unlocked) return { report, lockedIssueCount: 0 };
+): { report: PublicReport; lockedIssueCount: number } {
+  const categories: PublicCategory[] = report.categories.map((category) => {
+    const criteriaTotal = category.criteria.length;
+    // Counted before any truncation so the summary line stays truthful.
+    const criteriaPassed = category.criteria.filter(
+      (criterion) => criterion.verdict === "pass",
+    ).length;
+
+    const criteria = unlocked
+      ? category.criteria
+      : halveCriteria(category.criteria);
+
+    return {
+      ...category,
+      criteria,
+      criteriaTotal,
+      criteriaPassed,
+      criteriaHidden: criteriaTotal - criteria.length,
+    };
+  });
+
+  if (unlocked) {
+    return { report: { ...report, categories }, lockedIssueCount: 0 };
+  }
 
   const visible = report.issues.slice(0, FREE_ISSUES);
 
@@ -142,6 +202,7 @@ function gateReport(
     lockedIssueCount: report.issues.length - visible.length,
     report: {
       ...report,
+      categories,
       issues: visible,
       // The action plan is a view over the full issue set, so publishing it
       // would leak the titles of everything withheld.

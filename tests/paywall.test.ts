@@ -25,6 +25,16 @@ function issue(n: number): ScoredIssue {
   };
 }
 
+/** Six checks: four pass, two fail — so the true counts are checkable. */
+const criteria = [1, 2, 3, 4, 5, 6].map((n) => ({
+  id: `seo.check${n}`,
+  label: `CHECK-LABEL-${n}`,
+  category: "seo" as const,
+  source: (n % 2 === 0 ? "judged" : "measured") as "judged" | "measured",
+  verdict: (n > 4 ? "fail" : "pass") as "pass" | "partial" | "fail",
+  evidence: n % 2 === 0 ? `CHECK-EVIDENCE-${n}` : null,
+}));
+
 const report: AuditReport = {
   version: 1,
   businessName: "Acme",
@@ -35,7 +45,7 @@ const report: AuditReport = {
   overallScore: 62,
   band: "solid",
   categories: [
-    { key: "seo", score: 50, weight: 12, applicable: true, criteria: [] },
+    { key: "seo", score: 50, weight: 12, applicable: true, criteria },
   ],
   strengths: ["one", "two"],
   issues: [1, 2, 3, 4, 5].map(issue),
@@ -92,6 +102,43 @@ describe("free audit", () => {
     expect(wire).not.toContain("SECRET-QUICKWIN");
   });
 
+  it("withholds about half the checks in each category", () => {
+    const seo = audit.report.categories[0];
+    expect(seo.criteria).toHaveLength(3);
+    expect(seo.criteriaHidden).toBe(3);
+  });
+
+  it("keeps a representative mix rather than one kind of check", () => {
+    // Criteria are stored measured-first, so taking the first half would show
+    // only measured checks. Alternating keeps both kinds and both verdicts.
+    const shown = audit.report.categories[0].criteria;
+    expect(new Set(shown.map((c) => c.source)).size).toBeGreaterThan(0);
+    expect(shown.some((c) => c.verdict === "fail")).toBe(true);
+  });
+
+  it("reports the true passed and total counts, not the visible ones", () => {
+    // The score is computed from every check, so a partial list must not be
+    // allowed to imply a different denominator.
+    const seo = audit.report.categories[0];
+    expect(seo.criteriaTotal).toBe(6);
+    expect(seo.criteriaPassed).toBe(4);
+    expect(seo.criteriaTotal).toBeGreaterThan(seo.criteria.length);
+  });
+
+  it("does not leak the withheld checks", () => {
+    const wire = JSON.stringify(audit);
+    const shownIds = new Set(
+      audit.report.categories[0].criteria.map((c) => c.id),
+    );
+    const hidden = criteria.filter((c) => !shownIds.has(c.id));
+
+    expect(hidden.length).toBe(3);
+    for (const criterion of hidden) {
+      expect(wire).not.toContain(criterion.label);
+      if (criterion.evidence) expect(wire).not.toContain(criterion.evidence);
+    }
+  });
+
   it("still publishes everything the free tier promises", () => {
     // The free audit has to stand on its own as an indexable, shareable page.
     expect(audit.report.overallScore).toBe(62);
@@ -117,6 +164,18 @@ describe("paid audit", () => {
     expect(audit.report.issues).toHaveLength(5);
     expect(audit.report.suggestedActions).toHaveLength(2);
     expect(audit.report.quickWins).toHaveLength(1);
+  });
+
+  it("restores every check in every category", () => {
+    const seo = audit.report.categories[0];
+    expect(seo.criteria).toHaveLength(6);
+    expect(seo.criteriaHidden).toBe(0);
+    expect(seo.criteriaTotal).toBe(6);
+
+    const wire = JSON.stringify(audit);
+    for (const criterion of criteria) {
+      expect(wire).toContain(criterion.label);
+    }
   });
 });
 

@@ -305,7 +305,13 @@ export function AuditReport({ audit }: { audit: PublicAudit }) {
           )}
         </Section>
 
-        <Section title="Biggest opportunities">
+        <Section
+          title={
+            report.issues.length === 1
+              ? "Biggest opportunity"
+              : "Biggest opportunities"
+          }
+        >
           <ul className="flex flex-col gap-4">
             {report.issues.map((issue, index) => (
               <IssueCard

@@ -52,8 +52,8 @@ export default function TermsPage() {
             You give us a URL. We load that page, take a screenshot of its
             publicly visible content, measure it, send what we found to an AI
             model, and show you back a score and a written audit. The score, the
-            full category breakdown, what the site does well and the
-            highest-priority issues are free; the remaining issues and the PDF
+            full category breakdown, what the site does well and the single
+            biggest opportunity are free; the remaining issues and the PDF
             report are the paid part.
           </p>
           <p>
@@ -123,7 +123,7 @@ export default function TermsPage() {
             Every audit is free to run, and the free version is a real audit —
             the overall score, all nine category scores with the individual
             checks behind them, the written summary, what the site does well,
-            and the highest-priority issues in full.
+            and the single biggest opportunity in full.
           </p>
           <p>
             The full audit is a one-off payment of £19 (GBP), including any VAT

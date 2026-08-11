@@ -6,7 +6,8 @@ shareable audit at `/audit/{id}` — a score out of 100 across nine areas, prior
 issues with evidence, and paste-ready copy rewrites.
 
 Running an audit is free, and the free version is substantial: the score, all nine
-category breakdowns, the summary, the strengths and the highest-priority issues in full.
+category breakdowns, the summary, the strengths and the single biggest opportunity in
+full.
 **£19** unlocks the remaining issues, the ordered action plan and the PDF. Public audits
 are the growth loop — built to be shared and indexed, and to funnel businesses that need
 help toward [Nexiora Studio](https://nexiorastudio.com).
@@ -175,7 +176,8 @@ client-side paywall button can read the label without pulling the Stripe SDK int
 browser bundle.
 
 **What is free:** the overall score, all nine category scores with every underlying
-check, the summary, the strengths, and the first `FREE_ISSUES` (2) issues in full.
+check, the summary, the strengths, and the top `FREE_ISSUES` (1) issue in full —
+complete, not truncated, since a teaser with the useful half removed sells nothing.
 
 **What is paid:** the remaining issues with their fixes and copy rewrites, the ordered
 action plan, and the PDF.

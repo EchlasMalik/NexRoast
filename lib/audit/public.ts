@@ -111,14 +111,17 @@ type AuditRow = {
 };
 
 /**
- * Issues shown before paying.
+ * Issues shown before paying: the single biggest opportunity, in full.
  *
- * Two, not one: a single issue reads as a teaser, and the free audit still has
- * to stand on its own as a public, indexable page and as something worth
- * sharing. The score, every category breakdown, the summary and the strengths
- * are never gated — only the depth is.
+ * It is shown complete — problem, why it matters, the fix and the suggested
+ * wording — rather than truncated, because a free tier that withholds the
+ * useful half of what it does show demonstrates nothing worth paying for.
+ *
+ * The free audit still carries the score, all nine category breakdowns with
+ * every underlying check, the summary and the strengths. Only the remaining
+ * issues, the action plan and the PDF are gated.
  */
-export const FREE_ISSUES = 2;
+export const FREE_ISSUES = 1;
 
 /**
  * Applies the paywall by *removing* content, not hiding it.

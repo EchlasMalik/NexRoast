@@ -72,7 +72,12 @@ describe("free audit", () => {
   it("does not leak any withheld issue anywhere in the payload", () => {
     // Serialise the whole thing — this is what would reach the browser.
     const wire = JSON.stringify(audit);
-    for (const n of [3, 4, 5]) {
+    // Derived from the constant so the coverage follows it: changing the free
+    // allowance must not silently stop testing a newly-locked issue.
+    const locked = [1, 2, 3, 4, 5].slice(FREE_ISSUES);
+    expect(locked.length).toBeGreaterThan(0);
+
+    for (const n of locked) {
       expect(wire).not.toContain(`SECRET-RECOMMENDATION-${n}`);
       expect(wire).not.toContain(`SECRET-COPY-${n}`);
       expect(wire).not.toContain(`Issue ${n}`);

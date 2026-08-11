@@ -34,7 +34,7 @@ const FAQ = [
   {
     question: "Is it free?",
     answer:
-      "Running an audit is free, and the free version is a real audit: your score, all nine category scores with the checks behind them, what the site does well, and the highest-priority issues in full. £19 unlocks the rest — every remaining issue with its fix and suggested wording, the ordered action plan, and a PDF you can send to whoever builds the site.",
+      "Running an audit is free, and the free version is a real audit: your score, all nine category scores with the checks behind them, what the site does well, and your single biggest opportunity in full. £19 unlocks the rest — every remaining issue with its fix and suggested wording, the ordered action plan, and a PDF you can send to whoever builds the site.",
   },
   {
     question: "How is the score calculated?",

@@ -10,36 +10,59 @@ datasource db {
   provider = "postgresql"
 }
 
-enum RoastStatus {
+enum AuditStatus {
   pending
   processing
   complete
   failed
 }
 
-model Roast {
-  id            String        @id @default(cuid())
-  url           String
+/// A website audit. Public and shareable by design — `/audit/{id}` is the
+/// product's main unit of content, not a private result.
+///
+/// The full computed report lives in `report` as JSON, but anything a query
+/// needs to filter or sort on is denormalised into a real column. The sitemap
+/// and the duplicate-canonical logic both run on every completed audit, and
+/// neither can afford a JSON scan.
+model Audit {
+  id     String      @id @default(cuid())
+  url    String
+  /// Lowercased hostname, `www.` stripped. Only exists so repeat audits of the
+  /// same site can be grouped without parsing `url` in SQL.
+  host   String
+  status AuditStatus @default(pending)
+
   screenshotUrl String?
-  status        RoastStatus   @default(pending)
-  score         Int?
-  critique      Json?
-  createdAt     DateTime      @default(now())
-  unlockedAt    DateTime?
-  leadCaptures  LeadCapture[]
-  events        Event[]
-}
 
-model LeadCapture {
-  id        String   @id @default(cuid())
-  roastId   String
-  roast     Roast    @relation(fields: [roastId], references: [id], onDelete: Cascade)
-  name      String
-  email     String
-  message   String?
-  createdAt DateTime @default(now())
+  // --- denormalised from `report`, for queries ---
+  /// Null when no business name could be confidently detected. The audit
+  /// falls back to the host for display; it never invents one.
+  businessName String?
+  businessType String?
+  overallScore Int?
 
-  @@index([roastId])
+  /// Whether this audit may be indexed and appear in the sitemap. Computed
+  /// once at completion by lib/audit/visibility.ts — never at render time, so
+  /// a crawler and a visitor always agree.
+  indexable Boolean @default(false)
+
+  /// The whole computed audit: category scores, criteria, issues, copy
+  /// rewrites, strengths. Shape is owned by lib/audit/schema.ts.
+  report Json?
+  /// Bumped when the report shape changes incompatibly, so old rows can be
+  /// detected and excluded rather than crashing a renderer.
+  reportVersion Int @default(1)
+
+  createdAt   DateTime  @default(now())
+  completedAt DateTime?
+
+  events Event[]
+
+  /// Sitemap and canonical-duplicate lookups.
+  @@index([indexable, completedAt])
+  /// "Other audits of this host" — powers duplicate canonicalisation.
+  @@index([host, completedAt])
+  @@index([createdAt])
 }
 
 // A minimal analytics events table — deliberately a flexible `type` string
@@ -48,13 +71,26 @@ model LeadCapture {
 model Event {
   id        String   @id @default(cuid())
   type      String
-  roastId   String?
-  roast     Roast?   @relation(fields: [roastId], references: [id], onDelete: SetNull)
+  auditId   String?
+  audit     Audit?   @relation(fields: [auditId], references: [id], onDelete: SetNull)
   path      String?
   metadata  Json?
   createdAt DateTime @default(now())
 
   @@index([type])
-  @@index([roastId])
+  @@index([auditId])
   @@index([createdAt])
+}
+
+/// Rate-limit buckets. In Postgres rather than memory because the app runs on
+/// serverless functions: an in-process Map gives each instance its own counts,
+/// which makes the limit meaningless exactly when it matters. This is the only
+/// thing standing between an abusive visitor and the Gemini/Playwright bill.
+model RateLimit {
+  key     String   @id
+  count   Int      @default(1)
+  resetAt DateTime
+
+  /// Lets expired buckets be swept cheaply.
+  @@index([resetAt])
 }

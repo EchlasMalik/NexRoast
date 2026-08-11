@@ -44,3 +44,7 @@ next-env.d.ts
 /lib/generated/prisma
 
 .vercel
+
+# Pre-migration data dumps from scripts/export-legacy-data.mjs. These contain
+# real customer data (including who paid) — never commit them.
+nexroast-export-*.json

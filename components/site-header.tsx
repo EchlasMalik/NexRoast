@@ -12,7 +12,7 @@ import { useEffect, useState } from "react";
  */
 const SECTIONS = [
   { href: "#how-it-works", label: "How it works" },
-  { href: "#why-it-works", label: "Why it works" },
+  { href: "#what-we-check", label: "What we check" },
   { href: "#faq", label: "FAQ" },
 ] as const;
 
@@ -60,10 +60,10 @@ export function SiteHeader() {
 
         <div className="flex items-center gap-2">
           <a
-            href={onHome ? "#roast" : "/#roast"}
+            href={onHome ? "#audit" : "/#audit"}
             className="rounded-full bg-gradient-to-r from-orange-500 to-red-500 px-4 py-2 text-sm font-bold text-white shadow-lg shadow-orange-500/20 transition active:scale-[0.97] sm:px-5"
           >
-            Roast my site
+            Audit my website
           </a>
 
           <button

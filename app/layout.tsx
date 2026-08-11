@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Geist, Newsreader, Space_Grotesk } from "next/font/google";
 import { SiteHeader } from "@/components/site-header";
 import { SparkField } from "@/components/spark-field";
+import { getSiteUrl } from "@/lib/site-url";
 import "./globals.css";
 
 const AGENCY_URL = "https://nexiorastudio.com";
@@ -31,9 +32,17 @@ const newsreader = Newsreader({
 });
 
 export const metadata: Metadata = {
-  title: "NexRoast — Get your website roasted",
+  metadataBase: new URL(getSiteUrl()),
+  title: {
+    default: "NexRoast — Find out what's holding your website back",
+    template: "%s",
+  },
   description:
-    "Drop your URL and get an AI-powered roast: a screenshot, a brutally honest score, and the fixes that would actually move the needle.",
+    "A free AI website audit: your site scored across conversion, messaging, trust, UX, SEO, performance and mobile — with specific, actionable fixes.",
+  openGraph: {
+    siteName: "NexRoast",
+    type: "website",
+  },
 };
 
 export default function RootLayout({
@@ -66,7 +75,7 @@ export default function RootLayout({
                     NexRoast
                   </span>
                   <span className="text-xs text-neutral-500">
-                    Brutally honest website roasts.
+                    Free AI website audits.
                   </span>
                 </span>
               </Link>

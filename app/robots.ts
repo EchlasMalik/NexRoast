@@ -1,10 +1,12 @@
 import type { MetadataRoute } from "next";
 import { getSiteUrl } from "@/lib/site-url";
 
-// Roast pages stay crawlable but carry a page-level `noindex` (see
-// app/roast/[id]/page.tsx) — Google explicitly recommends against
-// Disallow-ing pages you want deindexed, since a disallowed page's crawler
-// never sees the noindex tag in the first place.
+/**
+ * Audit pages are crawlable. The ones that shouldn't be indexed carry a
+ * page-level `noindex` instead of being disallowed here, because a disallowed
+ * page's crawler never fetches it and so never sees the noindex — Google
+ * explicitly recommends against that combination.
+ */
 export default function robots(): MetadataRoute.Robots {
   return {
     rules: {

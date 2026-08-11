@@ -2,7 +2,12 @@ import type { EventType } from "@/lib/analytics";
 
 type ClientEventType = Extract<
   EventType,
-  "page_view" | "share_click" | "book_call_click" | "tiktok_image_download"
+  | "page_view"
+  | "share_click"
+  | "book_call_click"
+  | "tiktok_image_download"
+  | "pdf_download"
+  | "copy_fix_clicked"
 >;
 
 /**
@@ -13,7 +18,7 @@ type ClientEventType = Extract<
  */
 export function trackClient(
   type: ClientEventType,
-  data?: { roastId?: string; path?: string },
+  data?: { auditId?: string; path?: string },
 ): void {
   const payload = JSON.stringify({ type, ...data });
 

@@ -4,7 +4,7 @@ type RemotePattern = NonNullable<
   NonNullable<NextConfig["images"]>["remotePatterns"]
 >[number];
 
-// Roast screenshots are served from R2's public r2.dev subdomain by default,
+// Audit screenshots are served from R2's public r2.dev subdomain by default,
 // or from R2_PUBLIC_URL's custom domain when one is configured — allow both
 // so next/image can optimize them.
 const remotePatterns: RemotePattern[] = [
@@ -39,8 +39,31 @@ const nextConfig: NextConfig = {
   // never via a static import — so Next's file tracer doesn't discover it on
   // its own and it silently gets left out of the deployed function. This
   // forces it in for the one route that actually launches a browser.
+  // Targets /api/inngest, not /api/audit — capture runs inside the audit
+  // function now, so the browser binary has to be traced into the function
+  // that actually launches it. Getting this wrong is invisible in development
+  // (where the local Playwright browser is used) and fails on Vercel with
+  // "executable doesn't exist".
   outputFileTracingIncludes: {
-    "/api/roast": ["./node_modules/@sparticuz/chromium/bin/**/*"],
+    "/api/inngest": ["./node_modules/@sparticuz/chromium/bin/**/*"],
+  },
+  /**
+   * The product used to live at /roast/{id} and those links are already out in
+   * the world — shared, bookmarked, possibly linked to. They must not 404.
+   *
+   * A config-level redirect rather than middleware: this is a static path
+   * rewrite with no request inspection, so it costs nothing at the edge, and
+   * the project has no middleware.ts to justify introducing one.
+   */
+  async redirects() {
+    return [
+      { source: "/roast/:id", destination: "/audit/:id", permanent: true },
+      {
+        source: "/api/roast/:id",
+        destination: "/api/audit/:id/status",
+        permanent: true,
+      },
+    ];
   },
 };
 

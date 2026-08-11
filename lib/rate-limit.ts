@@ -1,61 +1,114 @@
 import type { NextRequest } from "next/server";
-
-const DEFAULT_WINDOW_MS = 60_000;
-const DEFAULT_MAX_REQUESTS_PER_WINDOW = 5;
-const MAX_TRACKED_KEYS = 10_000;
-
-type Bucket = { count: number; resetAt: number };
+import { prisma } from "@/lib/prisma";
 
 /**
- * In-memory sliding-window rate limiter. Good enough for a single server
- * instance; resets on restart and doesn't coordinate across instances, so a
- * multi-instance deployment would need a shared store (e.g. Redis) instead.
+ * Rate limiting backed by Postgres.
  *
- * One shared bucket map serves every caller — namespace keys per use case
- * (e.g. `lead:${ip}`, `roast-hourly:${ip}`) so different limiters don't
- * stomp on each other's counts.
+ * The previous implementation was an in-process Map. On serverless that gives
+ * every function instance its own counters, so the published limit was
+ * whatever it said multiplied by however many instances happened to be warm —
+ * which is to say, no limit at all. Since this is the only thing standing
+ * between an abusive visitor and the Gemini and Playwright bill, it has to be
+ * shared state, and the database is already provisioned.
+ *
+ * The whole check is one atomic statement. A read-then-write would let two
+ * concurrent requests both observe the same count and both pass.
  */
-const buckets = new Map<string, Bucket>();
 
-export function checkRateLimit(
-  key: string,
-  options?: { windowMs?: number; maxRequests?: number },
-): {
+const DEFAULT_WINDOW_MS = 60_000;
+const DEFAULT_MAX_REQUESTS = 5;
+
+export type RateLimitResult = {
   allowed: boolean;
   retryAfterSeconds: number;
-} {
+  remaining: number;
+};
+
+export async function checkRateLimit(
+  key: string,
+  options?: { windowMs?: number; maxRequests?: number },
+): Promise<RateLimitResult> {
   const windowMs = options?.windowMs ?? DEFAULT_WINDOW_MS;
-  const maxRequests = options?.maxRequests ?? DEFAULT_MAX_REQUESTS_PER_WINDOW;
-  const now = Date.now();
-  const bucket = buckets.get(key);
+  const maxRequests = options?.maxRequests ?? DEFAULT_MAX_REQUESTS;
+  const now = new Date();
+  const resetAt = new Date(now.getTime() + windowMs);
 
-  if (!bucket || now >= bucket.resetAt) {
-    if (buckets.size >= MAX_TRACKED_KEYS) {
-      for (const [k, v] of buckets) {
-        if (now >= v.resetAt) buckets.delete(k);
-      }
-    }
-    buckets.set(key, { count: 1, resetAt: now + windowMs });
-    return { allowed: true, retryAfterSeconds: 0 };
-  }
+  try {
+    // Upsert-and-return in one round trip:
+    // - no row, or an expired one  -> start a fresh window at count 1
+    // - live row                   -> increment
+    // ON CONFLICT makes the whole thing atomic under concurrency.
+    const rows = await prisma.$queryRaw<{ count: number; resetAt: Date }[]>`
+      INSERT INTO "RateLimit" ("key", "count", "resetAt")
+      VALUES (${key}, 1, ${resetAt})
+      ON CONFLICT ("key") DO UPDATE SET
+        "count"   = CASE WHEN "RateLimit"."resetAt" <= ${now} THEN 1 ELSE "RateLimit"."count" + 1 END,
+        "resetAt" = CASE WHEN "RateLimit"."resetAt" <= ${now} THEN ${resetAt} ELSE "RateLimit"."resetAt" END
+      RETURNING "count", "resetAt"
+    `;
 
-  if (bucket.count >= maxRequests) {
+    const row = rows[0];
+    if (!row)
+      return { allowed: true, retryAfterSeconds: 0, remaining: maxRequests };
+
+    const allowed = row.count <= maxRequests;
     return {
-      allowed: false,
-      retryAfterSeconds: Math.ceil((bucket.resetAt - now) / 1000),
+      allowed,
+      remaining: Math.max(0, maxRequests - row.count),
+      retryAfterSeconds: allowed
+        ? 0
+        : Math.max(
+            1,
+            Math.ceil((row.resetAt.getTime() - now.getTime()) / 1000),
+          ),
     };
+  } catch (error) {
+    // Fail open. A database hiccup should not take the whole product down —
+    // the limiter is abuse protection, not an authorisation check.
+    console.error("Rate limit check failed; allowing request", error);
+    return { allowed: true, retryAfterSeconds: 0, remaining: 0 };
   }
-
-  bucket.count += 1;
-  return { allowed: true, retryAfterSeconds: 0 };
 }
 
-export function getClientIp(request: NextRequest): string {
+/**
+ * Removes expired buckets. Called opportunistically rather than on a schedule:
+ * the table is tiny and this keeps it from growing unbounded without needing a
+ * cron job.
+ */
+export async function sweepRateLimits(): Promise<void> {
+  try {
+    await prisma.rateLimit.deleteMany({
+      where: { resetAt: { lte: new Date() } },
+    });
+  } catch {
+    // Housekeeping only.
+  }
+}
+
+export function getClientIp(request: NextRequest): string | null {
   const forwardedFor = request.headers.get("x-forwarded-for");
-  if (forwardedFor) return forwardedFor.split(",")[0].trim();
+  if (forwardedFor) {
+    const first = forwardedFor.split(",")[0].trim();
+    if (first) return first;
+  }
 
   const realIp = request.headers.get("x-real-ip");
-  if (realIp) return realIp.trim();
+  if (realIp?.trim()) return realIp.trim();
 
-  return "unknown";
+  // Deliberately null rather than the string "unknown": bucketing every
+  // header-less visitor together made one shared limit for all of them, which
+  // is both useless as protection and a way to lock out legitimate traffic.
+  return null;
+}
+
+/**
+ * Builds a namespaced bucket key, or null when the caller can't be identified.
+ * Callers decide what an unidentifiable client means for them.
+ */
+export function rateLimitKey(
+  namespace: string,
+  request: NextRequest,
+): string | null {
+  const ip = getClientIp(request);
+  return ip ? `${namespace}:${ip}` : null;
 }

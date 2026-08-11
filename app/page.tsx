@@ -5,40 +5,28 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import type { FormEvent } from "react";
 import { trackClient } from "@/lib/analytics-client";
+import { CATEGORIES, CATEGORY_KEYS } from "@/lib/audit/categories";
 
 const HOW_IT_WORKS = [
   {
     step: "01",
-    title: "Hand over the URL",
-    body: "Paste your link. No account, no card, no fourteen-field enquiry form. Just the address and a bit of courage.",
+    title: "Enter your website",
+    body: "Paste the address. No account, no card, no fourteen-field enquiry form.",
   },
   {
     step: "02",
-    title: "We photograph the evidence",
-    body: "We screenshot your homepage exactly as a first-time visitor sees it, then time how long they had to wait for the privilege.",
+    title: "NexRoast analyses it",
+    body: "We load your homepage the way a first-time visitor does, measure what it does, and read what it says.",
   },
   {
     step: "03",
-    title: "The verdict lands",
-    body: "A score out of 100, a survival rating, and a written review with jokes at your expense and a point behind every one of them.",
-  },
-];
-
-const WHY_IT_WORKS = [
-  {
-    icon: "😬",
-    title: "It's honest, not polite",
-    body: "Your mates said the site looks really nice. Your bounce rate disagrees. We say the bit everyone else is too well-mannered to mention.",
+    title: "Get your score and recommendations",
+    body: "A score out of 100 across nine areas, with every point traceable to a named check you can see.",
   },
   {
-    icon: "🔍",
-    title: "It's specific, not generic",
-    body: "No vague advice about improving your UX. Real problems on your actual page — the headline, the load time, the button nobody is clicking.",
-  },
-  {
-    icon: "💸",
-    title: "It's about money, not taste",
-    body: "Every problem comes with what it is quietly costing you: the enquiry that went to a competitor, the budget spent sending traffic to a page that was never going to convert it.",
+    step: "04",
+    title: "Fix the biggest opportunities",
+    body: "Each issue comes with what to change and, where it's wording, the replacement text ready to copy.",
   },
 ];
 
@@ -46,22 +34,27 @@ const FAQ = [
   {
     question: "Is it actually free?",
     answer:
-      "The roast is free and always will be. If you want the full write-up — every problem we found, the one fix worth doing first, and a PDF — that's a one-off £9.",
+      "Yes — the whole audit. Score, category breakdown, every issue we found, the recommendations and a PDF. There's no locked section and nothing to upgrade to.",
   },
   {
-    question: "How brutal is brutal?",
+    question: "How is the score calculated?",
     answer:
-      "Brutal about the website, never about you. It's sarcastic, it takes the mickey, and it will find the thing you were hoping nobody would notice. It won't be nasty about the people who built it.",
+      "From 42 individual checks across nine areas. Most are measured directly from your page — load time, heading structure, structured data, mobile layout — and the rest are judged against a fixed rubric. Every check is listed on your audit, so you can see exactly where each point came from.",
   },
   {
-    question: "Will it hurt my site?",
+    question: "Is it harsh?",
     answer:
-      "No. We load your homepage once, the same way any visitor would, and take a picture. Nothing is changed, nothing is submitted, nothing is logged into.",
+      "It's honest about the website and says nothing about you or your business. It's written so you'd be comfortable forwarding it to whoever built the site — and comfortable if a customer read it.",
   },
   {
-    question: "What if I disagree with it?",
+    question: "Will it slow down or damage my site?",
     answer:
-      "Fair enough — it's an AI reading one screenshot, not a lab report. Take the bits that land and ignore the rest. If it's badly wrong, tell us and we'll happily look.",
+      "No. We load your homepage once, the same way any visitor would, and take a screenshot. Nothing is changed, submitted or logged into.",
+  },
+  {
+    question: "What if I disagree with something?",
+    answer:
+      "Fair enough — it's an automated review of one page, not a full audit of your business. Every issue names the evidence behind it, so you can judge for yourself. Take what lands and ignore the rest.",
   },
 ];
 
@@ -83,22 +76,22 @@ export default function Home() {
     setSubmitting(true);
 
     try {
-      const response = await fetch("/api/roast", {
+      const response = await fetch("/api/audit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ url }),
       });
 
-      const data: { roast?: { id: string }; error?: string } =
+      const data: { audit?: { id: string }; error?: string } =
         await response.json();
 
-      if (!response.ok || !data.roast) {
+      if (!response.ok || !data.audit) {
         setError(data.error ?? "Something went wrong. Please try again.");
         setSubmitting(false);
         return;
       }
 
-      router.push(`/roast/${data.roast.id}`);
+      router.push(`/audit/${data.audit.id}`);
     } catch {
       setError("Network error. Please try again.");
       setSubmitting(false);
@@ -108,7 +101,7 @@ export default function Home() {
   return (
     <main className="flex flex-1 flex-col">
       <section
-        id="roast"
+        id="audit"
         className="flex scroll-mt-24 flex-col items-center gap-9 px-5 pt-14 pb-20 text-center sm:px-6 sm:pt-20 sm:pb-28"
       >
         <div className="flex flex-col items-center gap-5">
@@ -118,21 +111,21 @@ export default function Home() {
             width={128}
             height={128}
             priority
-            className="roast-logo-bob h-24 w-24 rounded-full drop-shadow-[0_12px_30px_rgba(249,115,22,0.4)] sm:h-32 sm:w-32"
+            className="roast-logo-bob h-20 w-20 rounded-full drop-shadow-[0_12px_30px_rgba(249,115,22,0.4)] sm:h-24 sm:w-24"
           />
           <span className="rounded-full border border-orange-400/25 bg-orange-500/10 px-3.5 py-1.5 text-[11px] font-bold tracking-[0.2em] text-orange-300 uppercase">
             Free · No signup
           </span>
-          <h1 className="font-display max-w-[19rem] text-[2.6rem] leading-[1.02] font-bold tracking-[-0.03em] text-balance text-white sm:max-w-2xl sm:text-7xl">
-            Your website is about to get{" "}
+          <h1 className="font-display max-w-[20rem] text-[2.5rem] leading-[1.04] font-bold tracking-[-0.03em] text-balance text-white sm:max-w-3xl sm:text-6xl">
+            Find out what&apos;s holding your{" "}
             <span className="bg-gradient-to-r from-orange-400 via-red-400 to-pink-500 bg-clip-text text-transparent">
-              ROASTED
-            </span>
-            .
+              website
+            </span>{" "}
+            back.
           </h1>
-          <p className="max-w-sm text-[1.0625rem] leading-relaxed text-balance text-neutral-400 sm:max-w-lg sm:text-xl">
-            Drop your URL. Our AI screenshots it, judges it, and tells you
-            exactly why it&apos;s not converting — with jokes.
+          <p className="max-w-md text-[1.0625rem] leading-relaxed text-balance text-neutral-400 sm:max-w-xl sm:text-xl">
+            Get a brutally honest AI audit of your website — from conversion and
+            messaging to SEO, trust, performance and mobile UX.
           </p>
         </div>
 
@@ -147,7 +140,7 @@ export default function Home() {
             autoCapitalize="off"
             autoCorrect="off"
             spellCheck={false}
-            placeholder="yourwebsite.com"
+            placeholder="Enter your website URL"
             value={url}
             onChange={(event) => setUrl(event.target.value)}
             disabled={submitting}
@@ -160,7 +153,7 @@ export default function Home() {
             disabled={submitting}
             className="w-full rounded-2xl bg-gradient-to-r from-orange-500 to-red-500 px-5 py-4 text-base font-bold text-white shadow-lg shadow-orange-500/25 transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 sm:text-lg"
           >
-            {submitting ? "Firing up the roast…" : "Roast my site 🔥"}
+            {submitting ? "Starting your audit…" : "Audit My Website"}
           </button>
           {error && (
             <p role="alert" className="text-sm font-medium text-red-400">
@@ -170,17 +163,17 @@ export default function Home() {
         </form>
 
         <p className="text-sm text-neutral-500">
-          Takes about a minute. Brutal honesty guaranteed.
+          Takes about a minute. No signup required.
         </p>
       </section>
 
       <Section
         id="how-it-works"
         eyebrow="How it works"
-        heading="Three steps to a difficult afternoon."
-        blurb="No onboarding, no discovery call, no invoice. Just a URL and the truth."
+        heading="From URL to a plan in about a minute."
+        blurb="No onboarding, no discovery call, no invoice."
       >
-        <ol className="grid gap-4 sm:grid-cols-3">
+        <ol className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {HOW_IT_WORKS.map((item) => (
             <li
               key={item.step}
@@ -201,23 +194,22 @@ export default function Home() {
       </Section>
 
       <Section
-        id="why-it-works"
-        eyebrow="Why it works"
-        heading="Because nobody else is going to tell you."
-        blurb="Friends are kind, agencies are billing you, and analytics only shows you the leaving — never the reason."
+        id="what-we-check"
+        eyebrow="What we check"
+        heading="Nine areas, 42 individual checks."
+        blurb="Most are measured directly from your page rather than guessed at, and every one is shown on your audit."
       >
-        <ul className="grid gap-4 sm:grid-cols-3">
-          {WHY_IT_WORKS.map((item) => (
+        <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {CATEGORY_KEYS.map((key) => (
             <li
-              key={item.title}
-              className="flex flex-col gap-3 rounded-2xl border border-white/10 bg-white/[0.04] p-6 text-left transition hover:border-orange-400/30 hover:bg-white/[0.07]"
+              key={key}
+              className="flex flex-col gap-1.5 rounded-2xl border border-white/10 bg-white/[0.04] p-5 text-left"
             >
-              <span className="text-2xl">{item.icon}</span>
-              <h3 className="font-display text-lg font-bold tracking-tight text-white">
-                {item.title}
+              <h3 className="font-display text-base font-bold tracking-tight text-white">
+                {CATEGORIES[key].label}
               </h3>
-              <p className="text-[0.9375rem] leading-relaxed text-neutral-400">
-                {item.body}
+              <p className="text-sm leading-relaxed text-neutral-400">
+                {CATEGORIES[key].blurb}
               </p>
             </li>
           ))}
@@ -232,9 +224,6 @@ export default function Home() {
         <ul className="mx-auto grid w-full max-w-3xl gap-3">
           {FAQ.map((item) => (
             <li key={item.question}>
-              {/* A native <details> rather than a state-driven accordion: the
-                  disclosure behaviour, keyboard support and correct ARIA all
-                  come for free, and it still works before hydration. */}
               <details className="group rounded-2xl border border-white/10 bg-white/[0.04] text-left transition open:border-orange-400/30 hover:border-orange-400/30">
                 <summary className="flex cursor-pointer list-none items-center justify-between gap-4 p-6 group-open:pb-3 [&::-webkit-details-marker]:hidden">
                   <h3 className="font-display text-base font-bold tracking-tight text-white sm:text-lg">
@@ -264,10 +253,10 @@ export default function Home() {
         </ul>
 
         <a
-          href="#roast"
+          href="#audit"
           className="mx-auto mt-2 rounded-2xl bg-gradient-to-r from-orange-500 to-red-500 px-7 py-4 text-base font-bold text-white shadow-lg shadow-orange-500/25 transition active:scale-[0.98]"
         >
-          Go on then, roast mine 🔥
+          Audit my website
         </a>
       </Section>
     </main>
@@ -301,7 +290,7 @@ function Section({
             {heading}
           </h2>
           {blurb && (
-            <p className="max-w-md text-base leading-relaxed text-balance text-neutral-400">
+            <p className="max-w-lg text-base leading-relaxed text-balance text-neutral-400">
               {blurb}
             </p>
           )}

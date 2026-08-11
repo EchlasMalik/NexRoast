@@ -48,20 +48,18 @@ export default function PrivacyPolicyPage() {
         </p>
 
         <Section title="What we collect">
-          <p>When you submit a URL to be roasted, we collect and store:</p>
+          <p>When you submit a URL to be audited, we collect and store:</p>
           <ul className="list-disc space-y-1 pl-5">
             <li>The URL you submitted.</li>
             <li>
               A screenshot of that page&apos;s publicly visible content at the
               time you submitted it.
             </li>
-            <li>
-              The AI-generated critique and score produced from that screenshot.
-            </li>
+            <li>The AI-generated audit and score produced from that page.</li>
           </ul>
           <p>
             We don&apos;t require an account, so we don&apos;t collect a name or
-            email just to generate a roast. If you choose to unlock the full
+            email just to generate an audit. If you choose to unlock the full
             report, payment is handled entirely by Stripe — we never see or
             store your card details, only a confirmation that a specific roast
             was paid for. If you choose to book a call with us, that happens on
@@ -69,17 +67,17 @@ export default function PrivacyPolicyPage() {
             see the booking, not anything Calendly collects to make it happen.
           </p>
           <p>
-            We also record basic, non-identifying usage events (e.g. a roast
+            We also record basic, non-identifying usage events (e.g. an audit
             page was viewed, a share button was clicked) to understand how
             people use the tool, and your IP address is used briefly to enforce
             rate limits against abuse — it isn&apos;t stored long-term or linked
-            to your roast.
+            to your audit.
           </p>
         </Section>
 
         <Section title="How we use it">
           <p>
-            To generate and display your roast, process payment for the full
+            To generate and display your audit, process payment for the full
             report, let you share your result, and understand which parts of the
             tool are actually being used so we can improve it. We don&apos;t
             sell your data, and we don&apos;t use it for advertising.

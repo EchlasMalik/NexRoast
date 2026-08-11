@@ -49,33 +49,31 @@ export default function TermsPage() {
 
         <Section title="What NexRoast is">
           <p>
-            You give us a URL. We take a screenshot of that page&apos;s publicly
-            visible content, send it to an AI model, and show you back a score
-            and a written critique of it. The free version shows part of that
-            critique; the paid version unlocks the rest along with a
-            downloadable PDF.
+            You give us a URL. We load that page, take a screenshot of its
+            publicly visible content, measure it, send what we found to an AI
+            model, and show you back a score and a written audit. All of it is
+            free.
           </p>
           <p>
-            It is a comedic critique tool. It is not a professional audit, a
-            legal opinion, an accessibility conformance report, or a security
-            assessment, and it should not be relied on as any of those.
+            It is an automated review of a single page. It is not a substitute
+            for a full professional audit, and it is not a legal opinion, an
+            accessibility conformance report or a security assessment.
           </p>
         </Section>
 
-        <Section title="The roast is an AI opinion, not a fact">
+        <Section title="The audit is an AI opinion, not a fact">
           <p>
-            Roasts are generated automatically by an AI model from a single
-            screenshot of the top of your page plus a little page metadata. That
-            means it can be wrong: it can misread what it sees, miss context it
-            was never shown, and make judgements you reasonably disagree with.
-            The score is a rough indicator, not a measurement.
+            Audits are generated automatically by an AI model from a screenshot
+            of your page plus measurements taken from it. That means it can be
+            wrong: it can misread what it sees, miss context it was never shown,
+            and make judgements you reasonably disagree with. The score is a
+            rough indicator, not a measurement.
           </p>
           <p>
-            The tone is deliberately blunt and sarcastic — that&apos;s the point
-            of the product. It is aimed at websites and the decisions behind
-            them, never at people. Act on any of it at your own discretion; we
-            aren&apos;t responsible for changes you make to your site off the
-            back of a roast.
+            The tone is deliberately direct. It is aimed at websites and the
+            decisions behind them, never at people. Act on any of it at your own
+            discretion; we aren&apos;t responsible for changes you make to your
+            site off the back of an audit.
           </p>
         </Section>
 
@@ -97,60 +95,43 @@ export default function TermsPage() {
           <p>
             Don&apos;t submit anything illegal, or pages whose main purpose is
             adult, hateful, or otherwise abusive content. We may refuse, remove,
-            or stop generating any roast at our discretion, and we may
+            or stop generating any audit at our discretion, and we may
             rate-limit or block use that looks automated or abusive.
           </p>
         </Section>
 
         <Section title="Sharing and results">
           <p>
-            Roast pages have unguessable links and are excluded from search
-            engines, but anyone with the link can open one. Treat the link as
-            semi-public, and only share it if you&apos;re happy for it to be
-            seen.
+            Audit pages are public. Completed audits that meet a quality bar may
+            be listed in our sitemap and indexed by search engines, and anyone
+            with the link can open one. Treat the link as public, and only run
+            an audit on a site you are happy to have reviewed publicly.
           </p>
           <p>
             Screenshots and share images we generate contain your page&apos;s
             publicly visible content. You may share, post, and repost your own
-            roast freely, including commercially. We may also feature roasts we
+            audit freely, including commercially. We may also feature audits we
             generate in our own marketing — email us if you&apos;d rather we
             didn&apos;t use yours.
           </p>
         </Section>
 
-        <Section title="Payment">
+        <Section title="It's free">
           <p>
-            The full report is a one-off payment of £9 (GBP), including any VAT
-            where applicable. Payment is taken by Stripe; we never see or store
-            your card details. Once payment is confirmed, the report unlocks
-            immediately on that roast&apos;s page and stays unlocked for that
-            link.
+            The audit is free. There is no paid tier, no locked section and
+            nothing to upgrade to — the score, every issue we found, the
+            recommendations and the PDF are all included at no charge.
           </p>
           <p>
-            The price shown at checkout is the price you pay. If we change
-            pricing, it only applies to purchases made afterwards.
-          </p>
-        </Section>
-
-        <Section title="Cancellation and refunds">
-          <p>
-            The full report is digital content delivered immediately. By
-            purchasing, you ask us to supply it straight away and you
-            acknowledge that you lose the 14-day right to cancel under the
-            Consumer Contracts (Information, Cancellation and Additional
-            Charges) Regulations 2013 once delivery has begun.
-          </p>
-          <p>
-            That said: if the report fails to generate, arrives broken, or
-            plainly isn&apos;t what was described, email us and we&apos;ll
-            refund you. We&apos;d rather fix it than argue about it. Nothing
-            here affects your statutory rights.
+            If that changes in future, any paid feature would be additional to
+            what is free today, and priced clearly before you commit to
+            anything.
           </p>
         </Section>
 
         <Section title="Intellectual property">
           <p>
-            You keep all rights in your own website and its content. The roast
+            You keep all rights in your own website and its content. The audit
             text, score, and images we generate for your URL are yours to use as
             you like. The NexRoast name, branding, site design, and underlying
             software remain ours.
@@ -162,7 +143,7 @@ export default function TermsPage() {
             NexRoast depends on third-party services (an AI provider, hosting,
             storage, payments) and is provided &ldquo;as is&rdquo;. We
             don&apos;t guarantee uninterrupted availability, that every site can
-            be screenshotted successfully, or that roast pages will be kept
+            be captured successfully, or that audit pages will be kept
             indefinitely. We may change or withdraw features at any time.
           </p>
         </Section>
@@ -170,10 +151,10 @@ export default function TermsPage() {
         <Section title="Liability">
           <p>
             To the extent permitted by law, our total liability to you in
-            connection with NexRoast is limited to the amount you paid us for
-            the roast in question. We aren&apos;t liable for indirect or
-            consequential losses, including lost profits, lost business, or lost
-            data.
+            connection with NexRoast is limited to the amount you have paid us,
+            which for a free audit is nothing. We aren&apos;t liable for
+            indirect or consequential losses, including lost profits, lost
+            business, or lost data.
           </p>
           <p>
             Nothing in these terms limits liability for death or personal injury
@@ -200,7 +181,7 @@ export default function TermsPage() {
 
         <Section title="Contact">
           <p>
-            Questions, complaints, or refund requests:{" "}
+            Questions or complaints:{" "}
             <a
               href="mailto:echlas@nexiorastudio.com"
               className="font-bold text-orange-400 underline underline-offset-2"

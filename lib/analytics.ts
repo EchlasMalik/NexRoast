@@ -3,22 +3,25 @@ import { prisma } from "@/lib/prisma";
 
 export type EventType =
   | "page_view"
-  | "roast_submitted"
+  | "audit_submitted"
+  | "audit_completed"
   | "share_click"
-  | "paywall_conversion"
-  | "lead_submitted"
+  | "tiktok_image_download"
+  | "pdf_download"
   | "book_call_click"
-  | "tiktok_image_download";
+  | "copy_fix_clicked";
 
 /**
- * Records a lightweight analytics event. Best-effort and non-blocking by
- * design — analytics must never be the reason a real user-facing request
- * fails, so failures are logged and swallowed rather than thrown.
+ * Records a lightweight analytics event.
+ *
+ * Deliberately NOT awaited by request handlers — see `trackFireAndForget`.
+ * The previous version was described as non-blocking but every caller awaited
+ * it, so an analytics write sat on the critical path of user-facing requests.
  */
 export async function track(
   type: EventType,
   data?: {
-    roastId?: string;
+    auditId?: string;
     path?: string;
     metadata?: Prisma.InputJsonValue;
   },
@@ -27,7 +30,7 @@ export async function track(
     await prisma.event.create({
       data: {
         type,
-        roastId: data?.roastId,
+        auditId: data?.auditId,
         path: data?.path,
         metadata: data?.metadata,
       },
@@ -35,4 +38,12 @@ export async function track(
   } catch (error) {
     console.error(`Failed to record analytics event "${type}"`, error);
   }
+}
+
+/**
+ * Fire-and-forget wrapper for request handlers. Analytics must never be the
+ * reason a user waits, and must never be the reason a request fails.
+ */
+export function trackAsync(...args: Parameters<typeof track>): void {
+  void track(...args);
 }

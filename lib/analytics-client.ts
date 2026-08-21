@@ -5,6 +5,7 @@ type ClientEventType = Extract<
   | "page_view"
   | "share_click"
   | "book_call_click"
+  | "agency_site_click"
   | "tiktok_image_download"
   | "pdf_download"
   | "copy_fix_clicked"

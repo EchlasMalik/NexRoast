@@ -9,6 +9,7 @@ export type EventType =
   | "tiktok_image_download"
   | "pdf_download"
   | "book_call_click"
+  | "agency_site_click"
   | "copy_fix_clicked"
   | "checkout_started"
   | "paywall_conversion";
